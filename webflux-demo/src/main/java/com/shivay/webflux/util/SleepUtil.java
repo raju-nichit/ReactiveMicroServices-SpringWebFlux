@@ -1,4 +1,4 @@
-package com.shivay.webflux;
+package com.shivay.webflux.util;
 
 public class SleepUtil {
     public static void sleepSeconds(int seconds){

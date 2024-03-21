@@ -1,6 +1,6 @@
 package com.shivay.webflux.service;
 
-import com.shivay.webflux.SleepUtil;
+import com.shivay.webflux.util.SleepUtil;
 import com.shivay.webflux.dto.Response;
 import org.springframework.stereotype.Service;
 
