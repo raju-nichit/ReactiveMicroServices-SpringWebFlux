@@ -18,11 +18,25 @@ public class ReactiveMathValidationController {
     @Autowired
     private ReactiveMathService reactiveMathService;
 
-    @GetMapping("square/{input}")
+    @GetMapping("square/{input}/throw")
     public Mono<Response> findSquare(@PathVariable("input") int input) {
-        if(input<10 || input >20){
+        if (input < 10 || input > 20) {
             throw new InputFailedValidationException(input);
         }
         return this.reactiveMathService.findSquare(input);
+    }
+
+    @GetMapping("square/{input}/mono-error")
+    public Mono<Response> monoError(@PathVariable("input") int input) {
+        return Mono.just(input)
+                .handle((interger, sink) -> {
+                    if (interger >= 10 && interger <= 20)
+                        sink.next(interger);
+                    else
+                        sink.error(new InputFailedValidationException(input
+                        ));
+                }).cast(Integer.class)
+                .flatMap(i-> this.reactiveMathService.findSquare(i));
+
     }
 }
