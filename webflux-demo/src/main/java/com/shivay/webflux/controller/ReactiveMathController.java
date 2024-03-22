@@ -19,23 +19,23 @@ public class ReactiveMathController {
     private ReactiveMathService reactiveMathService;
 
     @GetMapping("square/{input}")
-    public Mono<Response> findSquare(@PathVariable("input") int input){
+    public Mono<Response> findSquare(@PathVariable("input") int input) {
 
-        return  this.reactiveMathService.findSquare(input);
+        return this.reactiveMathService.findSquare(input);
     }
 
     @GetMapping(value = "table/{input}")
-    public Flux<Response> multiplicationTable(@PathVariable("input") int input){
+    public Flux<Response> multiplicationTable(@PathVariable("input") int input) {
         return this.reactiveMathService.multiplicationTable(input);
     }
 
-    @GetMapping(value = "table/{input}/stream",produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<Response> multiplicationTableStream(@PathVariable("input") int input){
+    @GetMapping(value = "table/{input}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<Response> multiplicationTableStream(@PathVariable("input") int input) {
         return this.reactiveMathService.multiplicationTable(input);
     }
 
     @PostMapping("multiply")
-    public Mono<Response> multiplication(@RequestBody Mono<MultiplyRequestDTO> multiplyRequestDTOMono, @RequestHeader Map<String,String> headers){
+    public Mono<Response> multiplication(@RequestBody Mono<MultiplyRequestDTO> multiplyRequestDTOMono, @RequestHeader Map<String, String> headers) {
         System.out.println(headers);
         return this.reactiveMathService.multiply(multiplyRequestDTOMono);
     }

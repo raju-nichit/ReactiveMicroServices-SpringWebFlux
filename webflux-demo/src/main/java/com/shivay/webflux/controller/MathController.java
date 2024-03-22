@@ -17,12 +17,12 @@ public class MathController {
     private MathService mathService;
 
     @GetMapping("square/{input}")
-    public Response findSqaure(@PathVariable("input") int input){
-        return  this.mathService.findSquare(input);
+    public Response findSqaure(@PathVariable("input") int input) {
+        return this.mathService.findSquare(input);
     }
 
     @GetMapping("table/{input}")
-    public List<Response> multiplicationTable(@PathVariable("input") int input){
+    public List<Response> multiplicationTable(@PathVariable("input") int input) {
         return this.mathService.multiplicationTable(input);
     }
 }

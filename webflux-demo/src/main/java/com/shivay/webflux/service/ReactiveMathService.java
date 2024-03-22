@@ -11,21 +11,21 @@ import reactor.core.publisher.Mono;
 @Service
 public class ReactiveMathService {
 
-    public Mono<Response> findSquare(int input){
-        return Mono.fromSupplier(()-> input * input).map(Response::new);
+    public Mono<Response> findSquare(int input) {
+        return Mono.fromSupplier(() -> input * input).map(Response::new);
     }
 
-    public Flux<Response> multiplicationTable(int input){
-        return Flux.range(1,10)
-                .doOnNext(i-> SleepUtil.sleepSeconds(1))
-                .doOnNext(i-> System.out.println("reactive math-service processing:"+i))
-                .map(i-> new Response(i*input));
+    public Flux<Response> multiplicationTable(int input) {
+        return Flux.range(1, 10)
+                .doOnNext(i -> SleepUtil.sleepSeconds(1))
+                .doOnNext(i -> System.out.println("reactive math-service processing:" + i))
+                .map(i -> new Response(i * input));
     }
 
-    public Mono<Response> multiply(Mono<MultiplyRequestDTO> requestDTOMono){
+    public Mono<Response> multiply(Mono<MultiplyRequestDTO> requestDTOMono) {
         return
                 requestDTOMono
-                        .map(dto-> dto.getNumber1()*dto.getNumber2())
+                        .map(dto -> dto.getNumber1() * dto.getNumber2())
                         .map(Response::new);
     }
 }
