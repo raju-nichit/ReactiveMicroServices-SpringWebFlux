@@ -19,6 +19,17 @@ public class RouterConfig {
 
     @Autowired
     private RequestHandler requestHandler;
+    @Autowired LoggingFilter loggingFilter;
+
+    @Bean
+    public RouterFunction<ServerResponse> highLevelRouter(){
+
+        return RouterFunctions
+                .route()
+                .path("router",this::serverResponseRouterFunction)
+                .build();
+
+    }
 
     @Bean
     public RouterFunction<ServerResponse> serverResponseRouterFunction() {
@@ -29,8 +40,8 @@ public class RouterConfig {
                 .GET("router/table-stream/{input}", requestHandler::tableStreamHandler)
                 .POST("router/multiply", requestHandler::multiplyHandler)
                 .GET("router/square/{input}/validation", requestHandler::squareHandlerWithValidation)
-
                 .onError(InputFailedValidationException.class,exceptionHandler())
+                .filter(loggingFilter)
                 .build();
     }
 
