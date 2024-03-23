@@ -5,10 +5,7 @@ import com.shivay.webflux.exception.InputFailedValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.reactive.function.server.RouterFunction;
-import org.springframework.web.reactive.function.server.RouterFunctions;
-import org.springframework.web.reactive.function.server.ServerRequest;
-import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.reactive.function.server.*;
 import reactor.core.publisher.Mono;
 
 import java.util.function.BiFunction;
@@ -35,11 +32,12 @@ public class RouterConfig {
     public RouterFunction<ServerResponse> serverResponseRouterFunction() {
 
         return RouterFunctions.route()
-                .GET("router/square/{input}", requestHandler::squareHandler)
-                .GET("router/table/{input}", requestHandler::tableHandler)
-                .GET("router/table-stream/{input}", requestHandler::tableStreamHandler)
-                .POST("router/multiply", requestHandler::multiplyHandler)
-                .GET("router/square/{input}/validation", requestHandler::squareHandlerWithValidation)
+                .GET("{input}", RequestPredicates.path("/1?"), requestHandler::squareHandler)
+                .GET("{input}", req-> ServerResponse.badRequest().bodyValue("Only 10-19 allowed"))
+                .GET("/table/{input}", requestHandler::tableHandler)
+                .GET("/table-stream/{input}", requestHandler::tableStreamHandler)
+                .POST("/multiply", requestHandler::multiplyHandler)
+                .GET("/square/{input}/validation", requestHandler::squareHandlerWithValidation)
                 .onError(InputFailedValidationException.class,exceptionHandler())
                 .filter(loggingFilter)
                 .build();
