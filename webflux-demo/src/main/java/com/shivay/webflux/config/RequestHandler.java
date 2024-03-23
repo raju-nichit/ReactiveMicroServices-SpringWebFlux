@@ -1,5 +1,6 @@
 package com.shivay.webflux.config;
 
+import com.shivay.webflux.dto.MultiplyRequestDTO;
 import com.shivay.webflux.dto.Response;
 import com.shivay.webflux.service.ReactiveMathService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,16 @@ public class RequestHandler {
                 .ok()
                 .contentType(MediaType.TEXT_EVENT_STREAM)
                 .body(this.mathService.multiplicationTable(input), Response.class);
+    }
+
+    public Mono<ServerResponse> multiplyHandler(ServerRequest serverRequest){
+
+        Mono<MultiplyRequestDTO> multiplyRequestDTOMono = serverRequest.bodyToMono(MultiplyRequestDTO.class);
+
+        return ServerResponse
+                .ok()
+//                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(this.mathService.multiply(multiplyRequestDTOMono),Response.class);
     }
 
 }
