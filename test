@@ -1,0 +1,117 @@
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
+
+public class EflowMapperTest {
+
+    private EflowMapper eflowMapper;
+
+    @BeforeEach
+    public void setUp() {
+        eflowMapper = Mappers.getMapper(EflowMapper.class);
+    }
+
+    @Test
+    public void testToUAASearchRequest() {
+        // Prepare test data
+        String requestId = "testRequestId";
+        UaaSearchResponse response = mock(UaaSearchResponse.class);
+        List<UaaSearchResponse> uaaSearchResponses = Collections.singletonList(response);
+        
+        when(response.uaaSignatureStrength()).thenReturn("Strong");
+        when(response.accountNumber()).thenReturn("12345");
+        when(response.uaaServiceClass()).thenReturn("ServiceClass");
+        when(response.cdDefNameProd()).thenReturn("ProductDef");
+        when(response.accountLe()).thenReturn("AccountLE");
+        when(response.edProdDefinition()).thenReturn("ProdDef");
+        when(response.currency()).thenReturn("USD");
+        when(response.uaaSignatureOtp()).thenReturn("OTP");
+        when(response.branch()).thenReturn("Branch");
+        when(response.cdbeLe()).thenReturn("CDLE");
+        when(response.acccountCtry()).thenReturn("Country");
+
+        // Execute the method
+        SearchResponse searchResponse = eflowMapper.toUAASearchRequest(requestId, uaaSearchResponses);
+
+        // Verify the results
+        assertEquals("testRequestId", searchResponse.getRequestId());
+        assertEquals("PMF", searchResponse.getSourceSystem());
+        assertNotNull(searchResponse.getTimestamp());
+        assertDoesNotThrow(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(searchResponse.getTimestamp()));
+
+        List<AccountRequest> accountRequests = searchResponse.getAccountRequests();
+        assertNotNull(accountRequests);
+        assertEquals(1, accountRequests.size());
+
+        AccountRequest accountRequest = accountRequests.get(0);
+        assertEquals("Strong", accountRequest.getUaaSignatureStrength());
+        assertEquals("12345", accountRequest.getAccountNumber());
+        assertEquals("ServiceClass", accountRequest.getUaaServiceClass());
+        assertEquals("ProductDef", accountRequest.getCdDefNameProd());
+        assertEquals("AccountLE", accountRequest.getAccountLe());
+        assertEquals("ProdDef", accountRequest.getEdProdDefinition());
+        assertEquals("USD", accountRequest.getCurrency());
+        assertEquals("OTP", accountRequest.getUaaSignatureOtp());
+        assertEquals("Branch", accountRequest.getBranch());
+        assertEquals("CDLE", accountRequest.getCdbeLe());
+        assertEquals("Country", accountRequest.getAcccountCtry());
+    }
+
+    @Test
+    public void testGetUAASearchAccountEmpty() {
+        // Prepare test data
+        List<UaaSearchResponse> uaaSearchResponses = Collections.emptyList();
+
+        // Execute the method
+        List<AccountRequest> accountRequests = eflowMapper.getUAASearchAccount(uaaSearchResponses);
+
+        // Verify the results
+        assertNotNull(accountRequests);
+        assertTrue(accountRequests.isEmpty());
+    }
+    
+    @Test
+    public void testGetUAASearchAccount() {
+        // Prepare test data
+        UaaSearchResponse response = mock(UaaSearchResponse.class);
+        List<UaaSearchResponse> uaaSearchResponses = Collections.singletonList(response);
+
+        when(response.uaaSignatureStrength()).thenReturn("Strong");
+        when(response.accountNumber()).thenReturn("12345");
+        when(response.uaaServiceClass()).thenReturn("ServiceClass");
+        when(response.cdDefNameProd()).thenReturn("ProductDef");
+        when(response.accountLe()).thenReturn("AccountLE");
+        when(response.edProdDefinition()).thenReturn("ProdDef");
+        when(response.currency()).thenReturn("USD");
+        when(response.uaaSignatureOtp()).thenReturn("OTP");
+        when(response.branch()).thenReturn("Branch");
+        when(response.cdbeLe()).thenReturn("CDLE");
+        when(response.acccountCtry()).thenReturn("Country");
+
+        // Execute the method
+        List<AccountRequest> accountRequests = eflowMapper.getUAASearchAccount(uaaSearchResponses);
+
+        // Verify the results
+        assertNotNull(accountRequests);
+        assertEquals(1, accountRequests.size());
+
+        AccountRequest accountRequest = accountRequests.get(0);
+        assertEquals("Strong", accountRequest.getUaaSignatureStrength());
+        assertEquals("12345", accountRequest.getAccountNumber());
+        assertEquals("ServiceClass", accountRequest.getUaaServiceClass());
+        assertEquals("ProductDef", accountRequest.getCdDefNameProd());
+        assertEquals("AccountLE", accountRequest.getAccountLe());
+        assertEquals("ProdDef", accountRequest.getEdProdDefinition());
+        assertEquals("USD", accountRequest.getCurrency());
+        assertEquals("OTP", accountRequest.getUaaSignatureOtp());
+        assertEquals("Branch", accountRequest.getBranch());
+        assertEquals("CDLE", accountRequest.getCdbeLe());
+        assertEquals("Country", accountRequest.getAcccountCtry());
+    }
+}
