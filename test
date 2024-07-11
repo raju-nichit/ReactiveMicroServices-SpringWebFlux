@@ -1,117 +1,61 @@
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-
-import java.text.SimpleDateFormat;
-import java.util.*;
+import static org.springframework.test.web.reactive.server.WebTestClient.bindToController;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
-public class EflowMapperTest {
+import reactor.core.publisher.Flux;
 
-    private EflowMapper eflowMapper;
+public class GraphQLControllerTest {
+
+    @Mock
+    private CitiDirectGraphQLService clientDefinitionService;
+
+    @InjectMocks
+    private GraphQLController graphQLController;
+
+    private WebTestClient webTestClient;
 
     @BeforeEach
     public void setUp() {
-        eflowMapper = Mappers.getMapper(EflowMapper.class);
+        MockitoAnnotations.openMocks(this);
+        webTestClient = bindToController(graphQLController).build();
     }
 
     @Test
-    public void testToUAASearchRequest() {
+    public void testFindClientDefinitionByReferenceIdAndType() {
         // Prepare test data
-        String requestId = "testRequestId";
-        UaaSearchResponse response = mock(UaaSearchResponse.class);
-        List<UaaSearchResponse> uaaSearchResponses = Collections.singletonList(response);
-        
-        when(response.uaaSignatureStrength()).thenReturn("Strong");
-        when(response.accountNumber()).thenReturn("12345");
-        when(response.uaaServiceClass()).thenReturn("ServiceClass");
-        when(response.cdDefNameProd()).thenReturn("ProductDef");
-        when(response.accountLe()).thenReturn("AccountLE");
-        when(response.edProdDefinition()).thenReturn("ProdDef");
-        when(response.currency()).thenReturn("USD");
-        when(response.uaaSignatureOtp()).thenReturn("OTP");
-        when(response.branch()).thenReturn("Branch");
-        when(response.cdbeLe()).thenReturn("CDLE");
-        when(response.acccountCtry()).thenReturn("Country");
+        String referenceId = "testReferenceId";
+        String type = "testType";
 
-        // Execute the method
-        SearchResponse searchResponse = eflowMapper.toUAASearchRequest(requestId, uaaSearchResponses);
+        CDBEModel model1 = new CDBEModel();
+        model1.setId("1");
+        model1.setName("Test Model 1");
 
-        // Verify the results
-        assertEquals("testRequestId", searchResponse.getRequestId());
-        assertEquals("PMF", searchResponse.getSourceSystem());
-        assertNotNull(searchResponse.getTimestamp());
-        assertDoesNotThrow(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(searchResponse.getTimestamp()));
+        CDBEModel model2 = new CDBEModel();
+        model2.setId("2");
+        model2.setName("Test Model 2");
 
-        List<AccountRequest> accountRequests = searchResponse.getAccountRequests();
-        assertNotNull(accountRequests);
-        assertEquals(1, accountRequests.size());
+        when(clientDefinitionService.findClientDefinitionDetails(type, referenceId))
+                .thenReturn(Flux.just(model1, model2));
 
-        AccountRequest accountRequest = accountRequests.get(0);
-        assertEquals("Strong", accountRequest.getUaaSignatureStrength());
-        assertEquals("12345", accountRequest.getAccountNumber());
-        assertEquals("ServiceClass", accountRequest.getUaaServiceClass());
-        assertEquals("ProductDef", accountRequest.getCdDefNameProd());
-        assertEquals("AccountLE", accountRequest.getAccountLe());
-        assertEquals("ProdDef", accountRequest.getEdProdDefinition());
-        assertEquals("USD", accountRequest.getCurrency());
-        assertEquals("OTP", accountRequest.getUaaSignatureOtp());
-        assertEquals("Branch", accountRequest.getBranch());
-        assertEquals("CDLE", accountRequest.getCdbeLe());
-        assertEquals("Country", accountRequest.getAcccountCtry());
-    }
+        // Execute the GraphQL query
+        webTestClient.post()
+                .uri("/graphql")
+                .bodyValue("{\"query\": \"{ ClientDefinitionBE(referenceId: \\\"testReferenceId\\\", type: \\\"testType\\\") { id, name } }\"}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.data.ClientDefinitionBE[0].id").isEqualTo("1")
+                .jsonPath("$.data.ClientDefinitionBE[0].name").isEqualTo("Test Model 1")
+                .jsonPath("$.data.ClientDefinitionBE[1].id").isEqualTo("2")
+                .jsonPath("$.data.ClientDefinitionBE[1].name").isEqualTo("Test Model 2");
 
-    @Test
-    public void testGetUAASearchAccountEmpty() {
-        // Prepare test data
-        List<UaaSearchResponse> uaaSearchResponses = Collections.emptyList();
-
-        // Execute the method
-        List<AccountRequest> accountRequests = eflowMapper.getUAASearchAccount(uaaSearchResponses);
-
-        // Verify the results
-        assertNotNull(accountRequests);
-        assertTrue(accountRequests.isEmpty());
-    }
-    
-    @Test
-    public void testGetUAASearchAccount() {
-        // Prepare test data
-        UaaSearchResponse response = mock(UaaSearchResponse.class);
-        List<UaaSearchResponse> uaaSearchResponses = Collections.singletonList(response);
-
-        when(response.uaaSignatureStrength()).thenReturn("Strong");
-        when(response.accountNumber()).thenReturn("12345");
-        when(response.uaaServiceClass()).thenReturn("ServiceClass");
-        when(response.cdDefNameProd()).thenReturn("ProductDef");
-        when(response.accountLe()).thenReturn("AccountLE");
-        when(response.edProdDefinition()).thenReturn("ProdDef");
-        when(response.currency()).thenReturn("USD");
-        when(response.uaaSignatureOtp()).thenReturn("OTP");
-        when(response.branch()).thenReturn("Branch");
-        when(response.cdbeLe()).thenReturn("CDLE");
-        when(response.acccountCtry()).thenReturn("Country");
-
-        // Execute the method
-        List<AccountRequest> accountRequests = eflowMapper.getUAASearchAccount(uaaSearchResponses);
-
-        // Verify the results
-        assertNotNull(accountRequests);
-        assertEquals(1, accountRequests.size());
-
-        AccountRequest accountRequest = accountRequests.get(0);
-        assertEquals("Strong", accountRequest.getUaaSignatureStrength());
-        assertEquals("12345", accountRequest.getAccountNumber());
-        assertEquals("ServiceClass", accountRequest.getUaaServiceClass());
-        assertEquals("ProductDef", accountRequest.getCdDefNameProd());
-        assertEquals("AccountLE", accountRequest.getAccountLe());
-        assertEquals("ProdDef", accountRequest.getEdProdDefinition());
-        assertEquals("USD", accountRequest.getCurrency());
-        assertEquals("OTP", accountRequest.getUaaSignatureOtp());
-        assertEquals("Branch", accountRequest.getBranch());
-        assertEquals("CDLE", accountRequest.getCdbeLe());
-        assertEquals("Country", accountRequest.getAcccountCtry());
+        // Verify the service method was called with the correct parameters
+        verify(clientDefinitionService, times(1)).findClientDefinitionDetails(type, referenceId);
     }
 }
