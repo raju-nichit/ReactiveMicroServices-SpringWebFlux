@@ -1,62 +1,44 @@
-import static org.springframework.test.web.reactive.server.WebTestClient.bindToApplicationContext;
-
-import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import reactor.core.publisher.Flux;
-import org.mockito.Mockito;
-import java.util.Arrays;
-import java.util.List;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+
+import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
-@ExtendWith(SpringExtension.class)
-@AutoConfigureWebTestClient
-public class GraphQLControllerWebTestClientTest {
+public class JsonFileReadTest {
 
     @Autowired
-    private ApplicationContext applicationContext;
-
-    @MockBean
-    private CitiDirectGraphQLService clientDefinitionService;
-
-    private WebTestClient webTestClient;
-
-    @BeforeEach
-    public void setUp() {
-        this.webTestClient = bindToApplicationContext(applicationContext).build();
-    }
+    private ResourceLoader resourceLoader;
 
     @Test
-    public void testFindClientDefinitionByReferenceIdAndType() {
-        // Given
-        String referenceId = "ref123";
-        String type = "typeA";
-        CDBEModel model1 = new CDBEModel(/* initialize with required values */);
-        CDBEModel model2 = new CDBEModel(/* initialize with required values */);
-        List<CDBEModel> expectedList = Arrays.asList(model1, model2);
-        Flux<CDBEModel> expectedFlux = Flux.fromIterable(expectedList);
+    public void testReadJsonFile() throws IOException {
+        // Load the JSON file from the test resources
+        Resource resource = resourceLoader.getResource("classpath:data.json");
 
-        Mockito.when(clientDefinitionService.findClientDefinitionDetails(type, referenceId))
-            .thenReturn(expectedFlux);
+        // Ensure the resource is not null
+        assertNotNull(resource);
 
-        String query = "{ \"query\": \"{ ClientDefinitionBE(referenceId: \\\"ref123\\\", type: \\\"typeA\\\") { /*fields*/ } }\" }";
+        // Read the JSON file into a string
+        String jsonString = new String(resource.getInputStream().readAllBytes());
 
-        // When & Then
-        webTestClient.post()
-            .uri("/graphql")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(query)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBody()
-            .jsonPath("$.data.ClientDefinitionBE").isArray()
-            .jsonPath("$.data.ClientDefinitionBE[0]./*field*/").isEqualTo(/*expected value*/);
+        // Ensure the JSON string is not empty
+        assertNotNull(jsonString);
+
+        // Parse the JSON string to a Java object using Jackson ObjectMapper
+        ObjectMapper objectMapper = new ObjectMapper();
+        MyDataClass myData = objectMapper.readValue(jsonString, MyDataClass.class);
+
+        // Validate the parsed object (replace with actual assertions as needed)
+        assertNotNull(myData);
+    }
+
+    // Define a class that matches the structure of your JSON data
+    public static class MyDataClass {
+        // Add fields and methods as per your JSON structure
     }
 }
