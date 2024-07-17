@@ -1,44 +1,68 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 
-import java.io.IOException;
+public class RecordUtility {
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+    /**
+     * Creates an instance of the given record class with default values.
+     *
+     * @param recordClass the class of the record
+     * @param <T> the type of the record
+     * @return an instance of the record class
+     * @throws IllegalArgumentException if the provided class is not a record class
+     * @throws RuntimeException if any reflection-related exception occurs
+     */
+    public static <T> T createRecordInstance(Class<T> recordClass) {
+        try {
+            if (!recordClass.isRecord()) {
+                throw new IllegalArgumentException("Provided class is not a record class.");
+            }
 
-@SpringBootTest
-public class JsonFileReadTest {
+            Constructor<?>[] constructors = recordClass.getDeclaredConstructors();
+            Constructor<?> canonicalConstructor = Arrays.stream(constructors)
+                    .filter(constructor -> constructor.getParameterCount() > 0)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("No matching constructor found."));
 
-    @Autowired
-    private ResourceLoader resourceLoader;
+            Class<?>[] parameterTypes = canonicalConstructor.getParameterTypes();
+            Object[] args = Arrays.stream(parameterTypes)
+                    .map(RecordUtility::getDefaultValue)
+                    .toArray();
 
-    @Test
-    public void testReadJsonFile() throws IOException {
-        // Load the JSON file from the test resources
-        Resource resource = resourceLoader.getResource("classpath:data.json");
-
-        // Ensure the resource is not null
-        assertNotNull(resource);
-
-        // Read the JSON file into a string
-        String jsonString = new String(resource.getInputStream().readAllBytes());
-
-        // Ensure the JSON string is not empty
-        assertNotNull(jsonString);
-
-        // Parse the JSON string to a Java object using Jackson ObjectMapper
-        ObjectMapper objectMapper = new ObjectMapper();
-        MyDataClass myData = objectMapper.readValue(jsonString, MyDataClass.class);
-
-        // Validate the parsed object (replace with actual assertions as needed)
-        assertNotNull(myData);
+            @SuppressWarnings("unchecked")
+            T instance = (T) canonicalConstructor.newInstance(args);
+            return instance;
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException("Failed to create an instance of the record class.", e);
+        }
     }
 
-    // Define a class that matches the structure of your JSON data
-    public static class MyDataClass {
-        // Add fields and methods as per your JSON structure
+    /**
+     * Returns a default value for the given type.
+     *
+     * @param type the class type
+     * @return a default value for the type
+     */
+    private static Object getDefaultValue(Class<?> type) {
+        if (type.isPrimitive()) {
+            if (type == boolean.class) return false;
+            if (type == byte.class) return (byte) 0;
+            if (type == char.class) return '\u0000';
+            if (type == short.class) return (short) 0;
+            if (type == int.class) return 0;
+            if (type == long.class) return 0L;
+            if (type == float.class) return 0.0f;
+            if (type == double.class) return 0.0;
+        }
+        return null; // Default value for reference types
+    }
+
+    public static void main(String[] args) {
+        // Example usage
+        record Person(String name, int age) {}
+
+        Person person = createRecordInstance(Person.class);
+        System.out.println(person); // Output: Person[name=null, age=0]
     }
 }
