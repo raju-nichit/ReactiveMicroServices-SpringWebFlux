@@ -1,28 +1,31 @@
+package com.shivay.util;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 
-public class Base64FileEncoder {
+public class FileBase64Decoder {
     public static void main(String[] args) {
-        // Paths for the input and output files
-        Path inputFile = Paths.get("input.txt");
-        Path outputFile = Paths.get("encoded_output.txt");
+      
+
+
+        String inputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java.b";
+        String outputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java.0";
 
         try {
-            // Read all bytes from the input file
-            byte[] fileBytes = Files.readAllBytes(inputFile);
+            // Read the encoded file content
+            byte[] encodedContent = Files.readAllBytes(Paths.get(inputFilePath));
 
-            // Encode the bytes into a Base64 string
-            String encodedString = Base64.getEncoder().encodeToString(fileBytes);
+            // Decode the content from Base64
+            byte[] decodedContent = Base64.getDecoder().decode(new String(encodedContent));
 
-            // Write the encoded string to the output file
-            Files.writeString(outputFile, encodedString);
+            // Write the decoded content to the output file
+            Files.write(Paths.get(outputFilePath), decodedContent);
 
-            System.out.println("File encoded successfully.");
+            System.out.println("File decoded and saved successfully.");
         } catch (IOException e) {
             e.printStackTrace();
+            System.out.println("An error occurred while processing the file.");
         }
     }
 }
