@@ -4,25 +4,23 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Base64;
 
-public class FileBase64Decoder {
+public class FileBase64Encoder {
     public static void main(String[] args) {
-      
-
-
-        String inputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java.b";
-        String outputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java.0";
+     
+        String inputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java";
+        String outputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java.b";
 
         try {
-            // Read the encoded file content
-            byte[] encodedContent = Files.readAllBytes(Paths.get(inputFilePath));
+            // Read the file content into a byte array
+            byte[] fileContent = Files.readAllBytes(Paths.get(inputFilePath));
 
-            // Decode the content from Base64
-            byte[] decodedContent = Base64.getDecoder().decode(new String(encodedContent));
+            // Encode the file content to Base64
+            String encodedContent = Base64.getEncoder().encodeToString(fileContent);
 
-            // Write the decoded content to the output file
-            Files.write(Paths.get(outputFilePath), decodedContent);
+            // Write the encoded content to the output file
+            Files.write(Paths.get(outputFilePath), encodedContent.getBytes());
 
-            System.out.println("File decoded and saved successfully.");
+            System.out.println("File encoded and saved successfully.");
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("An error occurred while processing the file.");
