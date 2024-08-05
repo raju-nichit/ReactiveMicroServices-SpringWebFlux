@@ -30,9 +30,9 @@ public class ReactiveMathValidationController {
     @GetMapping("square/{input}/mono-error")
     public Mono<Response> monoError(@PathVariable("input") int input) {
         return Mono.just(input)
-                .handle((interger, sink) -> {
-                    if (interger >= 10 && interger <= 20)
-                        sink.next(interger);
+                .handle((integer, sink) -> {
+                    if (integer >= 10 && integer <= 20)
+                        sink.next(integer);
                     else
                         sink.error(new InputFailedValidationException(input
                         ));
@@ -42,7 +42,7 @@ public class ReactiveMathValidationController {
     }
 
     @GetMapping("assignment/{input}")
-    public Mono<ResponseEntity<Response>> assingment(@PathVariable("input") int input){
+    public Mono<ResponseEntity<Response>> assignment(@PathVariable("input") int input){
         return
                 Mono.just(input)
                         .filter(i->i >= 10 && i <= 20)

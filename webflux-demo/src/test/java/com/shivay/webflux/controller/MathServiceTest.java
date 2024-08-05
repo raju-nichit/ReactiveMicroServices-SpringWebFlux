@@ -44,4 +44,21 @@ public class MathServiceTest extends BaseTest {
                 .expectNextCount(10)
                 .verifyComplete();
     }
+
+    @Test
+    public void streamEndpointTesting(){
+
+
+        Flux<Response> response = this.webClient
+                .get()
+                .uri("reactive-math/table/{input}/stream",5)
+                .retrieve()
+                .bodyToFlux(Response.class)
+                .doOnNext(System.out::println);
+
+
+        StepVerifier.create(response)
+                .expectNextCount(10)
+                .verifyComplete();
+    }
 }

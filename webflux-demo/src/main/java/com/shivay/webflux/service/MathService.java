@@ -15,7 +15,7 @@ public class MathService {
         return new Response(input * input);
     }
 
-    public List<Response> multiplicationTable(int input) {
+    public List<Response>  multiplicationTable(int input) {
         return IntStream.rangeClosed(1, 10)
                 .peek(i-> SleepUtil.sleepSeconds(1))
                 .peek(i-> System.out.println("math -service process:"+i))
