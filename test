@@ -1,29 +1,71 @@
-package com.shivay.util;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Base64;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Mono;
 
-public class FileBase64Encoder {
-    public static void main(String[] args) {
-     
-        String inputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java";
-        String outputFilePath = "C:\\Users\\Raju\\Documents\\WebClientConfigTest.java.b";
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.reactive.server.WebTestClient.bindToController;
 
-        try {
-            // Read the file content into a byte array
-            byte[] fileContent = Files.readAllBytes(Paths.get(inputFilePath));
+@ExtendWith(MockitoExtension.class)
+public class WorkflowEventControllerTest {
 
-            // Encode the file content to Base64
-            String encodedContent = Base64.getEncoder().encodeToString(fileContent);
+    @Mock
+    private WorkflowEventService workflowEventService;
 
-            // Write the encoded content to the output file
-            Files.write(Paths.get(outputFilePath), encodedContent.getBytes());
+    @InjectMocks
+    private WorkflowEventController workflowEventController;
 
-            System.out.println("File encoded and saved successfully.");
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("An error occurred while processing the file.");
-        }
+    private WebTestClient webTestClient;
+
+    @BeforeEach
+    public void setUp() {
+        webTestClient = bindToController(workflowEventController).build();
+    }
+
+    @Test
+    public void testSaveEvent_Success() {
+        // Given
+        WorkflowEventRequest request = new WorkflowEventRequest();
+        WorkflowEventRequest savedEvent = new WorkflowEventRequest();
+        ApiResponse<WorkflowEventRequest> expectedResponse = new ApiResponse<>("Event created successfully", savedEvent, true);
+
+        // When
+        when(workflowEventService.saveEvent(any(WorkflowEventRequest.class))).thenReturn(Mono.just(savedEvent));
+
+        // Then
+        webTestClient.post()
+            .uri("/api/v1/dataservice/workflowevents")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(ApiResponse.class)
+            .isEqualTo(expectedResponse);
+    }
+
+    @Test
+    public void testSaveEvent_Failure() {
+        // Given
+        WorkflowEventRequest request = new WorkflowEventRequest();
+        ApiResponse<WorkflowEventRequest> expectedResponse = new ApiResponse<>("Failed to save workflow event.", null, false);
+
+        // When
+        when(workflowEventService.saveEvent(any(WorkflowEventRequest.class))).thenReturn(Mono.error(new RuntimeException("Error")));
+
+        // Then
+        webTestClient.post()
+            .uri("/api/v1/dataservice/workflowevents")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(ApiResponse.class)
+            .isEqualTo(expectedResponse);
     }
 }
