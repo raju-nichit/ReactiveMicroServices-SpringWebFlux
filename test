@@ -1,41 +1,37 @@
-package com.shivay.reactive_auth;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import java.util.Base64;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
+public class AES256Example {
 
-import reactor.core.publisher.Mono;
+    private static final String ALGORITHM = "AES/GCM/NoPadding";
+    private static final int GCM_TAG_LENGTH = 128; // in bits
+    private static final int AES_KEY_SIZE = 256; // in bits
 
-@Component
-public class TokenAuthenticationFilter implements WebFilter {
+    public static void main(String[] args) throws Exception {
+        // Generate AES Key
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(AES_KEY_SIZE);
+        SecretKey secretKey = keyGen.generateKey();
 
-    private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String BEARER_PREFIX = "Bearer ";
+        // Encryption
+        Cipher cipher = Cipher.getInstance(ALGORITHM);
+        byte[] iv = new byte[12]; // 96-bit IV (recommended)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+        String plaintext = "Kutri";
+        byte[] encryptedData = cipher.doFinal(plaintext.getBytes());
 
-    @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        String authHeader = exchange.getRequest().getHeaders().getFirst("token");
+        // Base64 encode for storing as string
+        String encodedData = Base64.getEncoder().encodeToString(encryptedData);
+        System.out.println("Encrypted: " + encodedData);
 
-        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-            return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header"));
-        }
+        // Decryption
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+        byte[] decodedData = Base64.getDecoder().decode(encodedData);
+        byte[] decryptedData = cipher.doFinal(decodedData);
 
-        String token = authHeader.substring(BEARER_PREFIX.length());
-
-        // Perform token validation (this is where you call an external API or perform other logic)
-        if (!isValidToken(token)) {
-            return Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired token"));
-        }
-
-        // If the token is valid, proceed to the next filter in the chain
-        return chain.filter(exchange);
-    }
-
-    private boolean isValidToken(String token) {
-        // Replace with your actual token validation logic or API call
-        return "sample-valid-token".equals(token); // Example hardcoded check for demo purposes
+        System.out.println("Decrypted: " + new String(decryptedData));
     }
 }
