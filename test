@@ -1,3 +1,4 @@
  if (path.startsWith("/swagger") || path.startsWith("/v3/api-docs") || path.startsWith("/actuator")) {
             return chain.filter(exchange);
         }
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg [Request ID: %X{requestId}]%n
