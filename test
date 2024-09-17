@@ -1,36 +1,36 @@
-import org.slf4j.MDC;
-import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
+import org.springframework.graphql.client.HttpGraphQlClient;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.util.UUID;
+public class GraphQLClientConfig {
 
-@Component
-public class RequestIdFilter implements WebFilter {
+    public HttpGraphQlClient graphQlClient() {
+        WebClient webClient = WebClient.builder()
+            .baseUrl("http://your-graphql-api-endpoint")
+            .filter(logRequest())  // Add filter for request logging
+            .filter(logResponse()) // Add filter for response logging
+            .build();
 
-    private static final String REQUEST_ID_HEADER = "X-Request-Id";
-    private static final String MDC_REQUEST_ID_KEY = "requestId";
+        return HttpGraphQlClient.builder(webClient).build();
+    }
 
-    @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        String requestId = exchange.getRequest().getHeaders().getFirst(REQUEST_ID_HEADER);
+    // Filter to log outgoing requests
+    private ExchangeFilterFunction logRequest() {
+        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            System.out.println("Request: " + clientRequest.method() + " " + clientRequest.url());
+            clientRequest.headers().forEach((name, values) -> 
+                values.forEach(value -> System.out.println(name + ": " + value))
+            );
+            return Mono.just(clientRequest);
+        });
+    }
 
-        if (requestId == null || requestId.isEmpty()) {
-            requestId = UUID.randomUUID().toString();
-        }
-
-        // Store the request ID in MDC for logging
-        String finalRequestId = requestId;
-        return chain.filter(exchange)
-                .contextWrite(context -> context.put(MDC_REQUEST_ID_KEY, finalRequestId))
-                .doOnEach(signal -> {
-                    // Add requestId to MDC before processing each signal
-                    if (signal.isOnNext() || signal.isOnComplete() || signal.isOnError()) {
-                        MDC.put(MDC_REQUEST_ID_KEY, finalRequestId);
-                    }
-                })
-                .doFinally(signalType -> MDC.clear()); // Clear MDC after the request is processed
+    // Filter to log incoming responses
+    private ExchangeFilterFunction logResponse() {
+        return ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+            System.out.println("Response Status: " + clientResponse.statusCode());
+            return Mono.just(clientResponse);
+        });
     }
 }
