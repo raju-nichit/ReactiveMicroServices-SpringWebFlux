@@ -16,3 +16,4 @@ public class RequestLoggingFilterConfig {
         return filter;
     }
 }
+logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter=DEBUG
