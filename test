@@ -1,36 +1,18 @@
-import org.springframework.graphql.client.HttpGraphQlClient;
-import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.filter.CommonsRequestLoggingFilter;
+import org.springframework.context.annotation.Configuration;
 
-public class GraphQLClientConfig {
+@Configuration
+public class RequestLoggingFilterConfig {
 
-    public HttpGraphQlClient graphQlClient() {
-        WebClient webClient = WebClient.builder()
-            .baseUrl("http://your-graphql-api-endpoint")
-            .filter(logRequest())  // Add filter for request logging
-            .filter(logResponse()) // Add filter for response logging
-            .build();
-
-        return HttpGraphQlClient.builder(webClient).build();
-    }
-
-    // Filter to log outgoing requests
-    private ExchangeFilterFunction logRequest() {
-        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
-            System.out.println("Request: " + clientRequest.method() + " " + clientRequest.url());
-            clientRequest.headers().forEach((name, values) -> 
-                values.forEach(value -> System.out.println(name + ": " + value))
-            );
-            return Mono.just(clientRequest);
-        });
-    }
-
-    // Filter to log incoming responses
-    private ExchangeFilterFunction logResponse() {
-        return ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
-            System.out.println("Response Status: " + clientResponse.statusCode());
-            return Mono.just(clientResponse);
-        });
+    @Bean
+    public CommonsRequestLoggingFilter logFilter() {
+        CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
+        filter.setIncludeClientInfo(true);
+        filter.setIncludeQueryString(true);
+        filter.setIncludePayload(true);
+        filter.setIncludeHeaders(true);
+        filter.setMaxPayloadLength(10000); // Adjust payload size as needed
+        return filter;
     }
 }
