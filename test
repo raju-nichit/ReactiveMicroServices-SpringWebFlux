@@ -1,19 +1,50 @@
-import org.springframework.context.annotation.Bean;
-import org.springframework.web.filter.CommonsRequestLoggingFilter;
-import org.springframework.context.annotation.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.client.reactive.ClientHttpResponse;
+import org.springframework.web.reactive.function.client.ClientRequest;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
+import reactor.core.publisher.Mono;
 
-@Configuration
-public class RequestLoggingFilterConfig {
+import java.nio.charset.StandardCharsets;
 
-    @Bean
-    public CommonsRequestLoggingFilter logFilter() {
-        CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
-        filter.setIncludeClientInfo(true);
-        filter.setIncludeQueryString(true);
-        filter.setIncludePayload(true);
-        filter.setIncludeHeaders(true);
-        filter.setMaxPayloadLength(10000); // Adjust payload size as needed
-        return filter;
+public class WebClientLoggingFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebClientLoggingFilter.class);
+
+    // Filter for logging request details
+    public static ExchangeFilterFunction logRequest() {
+        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            logger.info("Request: method={}, url={}, headers={}",
+                    clientRequest.method(), clientRequest.url(), clientRequest.headers());
+            return logRequestBody(clientRequest);
+        });
+    }
+
+    // Filter for logging response details
+    public static ExchangeFilterFunction logResponse() {
+        return ExchangeFilterFunction.ofResponseProcessor(clientResponse -> {
+            logger.info("Response: status={}", clientResponse.statusCode());
+            return logResponseBody(clientResponse);
+        });
+    }
+
+    // Log request body
+    private static Mono<ClientRequest> logRequestBody(ClientRequest request) {
+        return Mono.just(request)
+                .flatMap(req -> req.body()
+                        .doOnNext(body -> body.toString()
+                                .lines()
+                                .forEach(line -> logger.info("Request body: {}", line))))
+                .then(Mono.just(request));
+    }
+
+    // Log response body
+    private static Mono<ClientResponse> logResponseBody(ClientResponse response) {
+        return response.bodyToMono(String.class)
+                .flatMap(body -> {
+                    logger.info("Response body: {}", body);
+                    return Mono.just(response);
+                });
     }
 }
-logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter=DEBUG
