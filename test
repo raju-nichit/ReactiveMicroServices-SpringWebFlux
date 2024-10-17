@@ -1,7 +1,1 @@
-<session-config>
-        <cookie-config>
-            <http-only>true</http-only> <!-- Prevents JavaScript access to cookies -->
-            <secure>true</secure>       <!-- Ensures cookies are sent over HTTPS -->
-        </cookie-config>
-        <session-timeout>30</session-timeout> <!-- Set session timeout in minutes -->
-    </session-config>
+java -cp jasypt-1.9.3.jar org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI input="yourSecretValue" password="encryptionKey" algorithm=PBEWITHHMACSHA512ANDAES_256
