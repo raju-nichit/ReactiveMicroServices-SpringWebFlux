@@ -1,1 +1,104 @@
-GnfqiS232gPeQcPKHEBmkkeF8evTzaBL
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.elasticsearch.core.ReactiveElasticsearchTemplate;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class SelfServiceAOServiceTest {
+
+    @InjectMocks
+    private SelfServiceAOService selfServiceAOService;
+
+    @Mock
+    private TTSCompanyDataRepo ttsCompanyDataRepo;
+
+    @Mock
+    private ReactiveElasticsearchTemplate elasticsearchTemplate;
+
+    @Mock
+    private SSEligibilityCheckValidator ssEligibilityCheckValidator;
+
+    @Value("${app.elastic.index.ttscompany}")
+    private String ttsCompanyIndex;
+
+    @Test
+    void testProcessEligibilityCheck_validRequest() {
+        // Arrange
+        SSEligibilityCheckRequest request = new SSEligibilityCheckRequest();
+        request.setGfcIds(List.of("GFC123", "GFC456"));
+        request.setRequestId("12345");
+
+        TTSCompanyData companyData1 = new TTSCompanyData();
+        companyData1.setGfcId("GFC123");
+        companyData1.setNegClient("SELF");
+        // Mocking Elasticsearch data fetch
+        when(ssEligibilityCheckValidator.validate(request)).thenReturn(List.of());
+        when(elasticsearchTemplate.search(any(), eq(TTSCompanyData.class), any()))
+                .thenReturn(Flux.just(new SearchHit<>(null, null, null, companyData1)));
+
+        // Act
+        Mono<SSEligibilityCheckResponse> responseMono = selfServiceAOService.processEligibilityCheck(request);
+
+        // Assert
+        StepVerifier.create(responseMono)
+                .assertNext(response -> {
+                    assertEquals("12345", response.getRequestId());
+                    assertNotNull(response.getLegalEntities());
+                    assertEquals(2, response.getLegalEntities().size());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void testProcessEligibilityCheck_invalidRequest() {
+        // Arrange
+        SSEligibilityCheckRequest request = new SSEligibilityCheckRequest();
+        request.setGfcIds(List.of("GFC123"));
+        request.setRequestId("12345");
+
+        List<String> errors = List.of("Invalid GFC ID");
+        when(ssEligibilityCheckValidator.validate(request)).thenReturn(errors);
+
+        // Act
+        Mono<SSEligibilityCheckResponse> responseMono = selfServiceAOService.processEligibilityCheck(request);
+
+        // Assert
+        StepVerifier.create(responseMono)
+                .expectErrorMatches(throwable -> throwable instanceof BadRequestException &&
+                        throwable.getMessage().contains("Invalid GFC ID"))
+                .verify();
+    }
+
+    @Test
+    void testCreateLegalEntityDetails() {
+        // Arrange
+        TTSCompanyData companyData = new TTSCompanyData();
+        companyData.setGfcId("GFC123");
+        companyData.setNegClient("SELF");
+        companyData.setPiIndicator("N");
+        companyData.setClientType("FI");
+
+        // Act
+        LegalEntityDetails details = selfServiceAOService.createLegalEntityDetails("GFC123", companyData);
+
+        // Assert
+        assertNotNull(details);
+        assertEquals("GFC123", details.getGfcId());
+        assertEquals("Client is Not Eligible", details.getDescription());
+        assertEquals("N", details.getEligibleForSS());
+    }
+}
