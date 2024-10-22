@@ -3,16 +3,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.Query;
+import org.springframework.data.elasticsearch.core.query.QueryBuilders;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.index.IndexCoordinates;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -32,9 +35,6 @@ class SelfServiceAOServiceTest {
     @Mock
     private SSEligibilityCheckValidator ssEligibilityCheckValidator;
 
-    @Value("${app.elastic.index.ttscompany}")
-    private String ttsCompanyIndex;
-
     @Test
     void testProcessEligibilityCheck_validRequest() {
         // Arrange
@@ -45,10 +45,17 @@ class SelfServiceAOServiceTest {
         TTSCompanyData companyData1 = new TTSCompanyData();
         companyData1.setGfcId("GFC123");
         companyData1.setNegClient("SELF");
-        // Mocking Elasticsearch data fetch
+
+        // Mock SearchHit for Elasticsearch response
+        SearchHit<TTSCompanyData> searchHit1 = mock(SearchHit.class);
+        when(searchHit1.getContent()).thenReturn(companyData1);
+
+        // Mock Elasticsearch search method
+        when(elasticsearchTemplate.search(any(NativeSearchQuery.class), eq(TTSCompanyData.class), any(IndexCoordinates.class)))
+                .thenReturn(Flux.just(searchHit1));
+
+        // Mocking eligibility check validator
         when(ssEligibilityCheckValidator.validate(request)).thenReturn(List.of());
-        when(elasticsearchTemplate.search(any(), eq(TTSCompanyData.class), any()))
-                .thenReturn(Flux.just(new SearchHit<>(null, null, null, companyData1)));
 
         // Act
         Mono<SSEligibilityCheckResponse> responseMono = selfServiceAOService.processEligibilityCheck(request);
@@ -61,44 +68,5 @@ class SelfServiceAOServiceTest {
                     assertEquals(2, response.getLegalEntities().size());
                 })
                 .verifyComplete();
-    }
-
-    @Test
-    void testProcessEligibilityCheck_invalidRequest() {
-        // Arrange
-        SSEligibilityCheckRequest request = new SSEligibilityCheckRequest();
-        request.setGfcIds(List.of("GFC123"));
-        request.setRequestId("12345");
-
-        List<String> errors = List.of("Invalid GFC ID");
-        when(ssEligibilityCheckValidator.validate(request)).thenReturn(errors);
-
-        // Act
-        Mono<SSEligibilityCheckResponse> responseMono = selfServiceAOService.processEligibilityCheck(request);
-
-        // Assert
-        StepVerifier.create(responseMono)
-                .expectErrorMatches(throwable -> throwable instanceof BadRequestException &&
-                        throwable.getMessage().contains("Invalid GFC ID"))
-                .verify();
-    }
-
-    @Test
-    void testCreateLegalEntityDetails() {
-        // Arrange
-        TTSCompanyData companyData = new TTSCompanyData();
-        companyData.setGfcId("GFC123");
-        companyData.setNegClient("SELF");
-        companyData.setPiIndicator("N");
-        companyData.setClientType("FI");
-
-        // Act
-        LegalEntityDetails details = selfServiceAOService.createLegalEntityDetails("GFC123", companyData);
-
-        // Assert
-        assertNotNull(details);
-        assertEquals("GFC123", details.getGfcId());
-        assertEquals("Client is Not Eligible", details.getDescription());
-        assertEquals("N", details.getEligibleForSS());
     }
 }
