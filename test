@@ -19,74 +19,68 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class BranchDataServiceTest {
+class AccountPurposeDataServiceTest {
 
     @InjectMocks
-    private BranchDataService branchDataService;
+    private AccountPurposeDataService accountPurposeDataService;
 
     @Mock
-    private BranchDetailsRepo branchDetailsRepo;
-
-    @Mock
-    private BranchesRepo branchesRepo;
+    private AccountPurposeRepo accountPurposeRepo;
 
     @Mock
     private ReactiveElasticsearchTemplate elasticsearchTemplate;
 
     @Mock
-    private BranchDataValidator branchDataValidator;
-
-    @Mock
-    private BranchDetailsDataValidator branchDetailsDataValidator;
+    private AccountPurposeDataValidator accountPurposeDataValidator;
 
     @Test
-    void testFetchBranches_validRequest() {
+    void testFetchAccountPurpose_validRequest() {
         // Arrange
-        BranchDataRequest request = new BranchDataRequest();
+        AccountPurposeDataRequest request = new AccountPurposeDataRequest();
         request.setBranchCode("001");
         request.setCountryCode("US");
         request.setRequestId("12345");
 
-        Branches branches = new Branches();
-        branches.setBranchCode("001");
-        branches.setCountryCode("US");
+        AccountPurpose accountPurpose = new AccountPurpose();
+        accountPurpose.setBranchCode("001");
+        accountPurpose.setCountryCode("US");
 
         // Mock SearchHit for Elasticsearch response
-        SearchHit<Branches> searchHit = mock(SearchHit.class);
-        when(searchHit.getContent()).thenReturn(branches);
+        SearchHit<AccountPurpose> searchHit = mock(SearchHit.class);
+        when(searchHit.getContent()).thenReturn(accountPurpose);
 
         // Mock Elasticsearch search method
-        when(elasticsearchTemplate.search(any(Query.class), eq(Branches.class), any(IndexCoordinates.class)))
+        when(elasticsearchTemplate.search(any(Query.class), eq(AccountPurpose.class), any(IndexCoordinates.class)))
                 .thenReturn(Flux.just(searchHit));
 
-        // Mocking branchDataValidator
-        when(branchDataValidator.validate(request)).thenReturn(List.of());
+        // Mocking accountPurposeDataValidator
+        when(accountPurposeDataValidator.validate(request)).thenReturn(List.of());
 
         // Act
-        Mono<BranchDataResponse> responseMono = branchDataService.fetchBranches(request);
+        Mono<AccountPurposeDataResponse> responseMono = accountPurposeDataService.fetchAccountPurpose(request);
 
         // Assert
         StepVerifier.create(responseMono)
                 .assertNext(response -> {
                     assertEquals("12345", response.getRequestId());
-                    assertEquals("001", response.getSource());  // Assuming `request.getSource()` returns "001"
-                    assertNotNull(response.getBranchesData());
-                    assertEquals(1, response.getBranchesData().size());
+                    assertEquals("001", response.getSource());  // Assuming request.getSource() returns "001"
+                    assertNotNull(response.getAccountPurposeData());
+                    assertEquals(1, response.getAccountPurposeData().size());
                 })
                 .verifyComplete();
     }
 
     @Test
-    void testFetchBranches_invalidRequest() {
+    void testFetchAccountPurpose_invalidRequest() {
         // Arrange
-        BranchDataRequest request = new BranchDataRequest();
+        AccountPurposeDataRequest request = new AccountPurposeDataRequest();
         request.setRequestId("12345");
 
         List<String> errors = List.of("Invalid Branch Code");
-        when(branchDataValidator.validate(request)).thenReturn(errors);
+        when(accountPurposeDataValidator.validate(request)).thenReturn(errors);
 
         // Act
-        Mono<BranchDataResponse> responseMono = branchDataService.fetchBranches(request);
+        Mono<AccountPurposeDataResponse> responseMono = accountPurposeDataService.fetchAccountPurpose(request);
 
         // Assert
         StepVerifier.create(responseMono)
@@ -96,113 +90,32 @@ class BranchDataServiceTest {
     }
 
     @Test
-    void testSearchBranchesData() {
+    void testSearchAccountPurposeData() {
         // Arrange
-        BranchDataRequest request = new BranchDataRequest();
+        AccountPurposeDataRequest request = new AccountPurposeDataRequest();
         request.setBranchCode("001");
         request.setCountryCode("US");
 
-        Branches branches = new Branches();
-        branches.setBranchCode("001");
-        branches.setCountryCode("US");
+        AccountPurpose accountPurpose = new AccountPurpose();
+        accountPurpose.setBranchCode("001");
+        accountPurpose.setCountryCode("US");
 
         // Mock SearchHit for Elasticsearch response
-        SearchHit<Branches> searchHit = mock(SearchHit.class);
-        when(searchHit.getContent()).thenReturn(branches);
+        SearchHit<AccountPurpose> searchHit = mock(SearchHit.class);
+        when(searchHit.getContent()).thenReturn(accountPurpose);
 
         // Mock Elasticsearch search method
-        when(elasticsearchTemplate.search(any(Query.class), eq(Branches.class), any(IndexCoordinates.class)))
+        when(elasticsearchTemplate.search(any(Query.class), eq(AccountPurpose.class), any(IndexCoordinates.class)))
                 .thenReturn(Flux.just(searchHit));
 
         // Act
-        Flux<Branches> branchesFlux = branchDataService.searchBranchesData(request);
+        Flux<AccountPurpose> accountPurposeFlux = accountPurposeDataService.searchAccountPurposeData(request);
 
         // Assert
-        StepVerifier.create(branchesFlux)
-                .assertNext(foundBranch -> {
-                    assertEquals("001", foundBranch.getBranchCode());
-                    assertEquals("US", foundBranch.getCountryCode());
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    void testPerformBranchLookup_validRequest() {
-        // Arrange
-        BranchDetailsLookupRequest request = new BranchDetailsLookupRequest();
-        request.setCountryCodes(List.of("US"));
-        request.setRequestId("12345");
-
-        BranchDetails branchDetails = new BranchDetails();
-        branchDetails.setCountryCode("US");
-
-        // Mock SearchHit for Elasticsearch response
-        SearchHit<BranchDetails> searchHit = mock(SearchHit.class);
-        when(searchHit.getContent()).thenReturn(branchDetails);
-
-        // Mock Elasticsearch search method
-        when(elasticsearchTemplate.search(any(Query.class), eq(BranchDetails.class), any(IndexCoordinates.class)))
-                .thenReturn(Flux.just(searchHit));
-
-        // Mocking branchDetailsDataValidator
-        when(branchDetailsDataValidator.validate(request)).thenReturn(List.of());
-
-        // Act
-        Mono<BranchDetailsLookupResponse> responseMono = branchDataService.performBranchLookup(request);
-
-        // Assert
-        StepVerifier.create(responseMono)
-                .assertNext(response -> {
-                    assertEquals("12345", response.getRequestId());
-                    assertNotNull(response.getBranchDetailsData());
-                    assertEquals(1, response.getBranchDetailsData().size());
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    void testPerformBranchLookup_invalidRequest() {
-        // Arrange
-        BranchDetailsLookupRequest request = new BranchDetailsLookupRequest();
-        request.setRequestId("12345");
-
-        List<String> errors = List.of("Invalid Country Code");
-        when(branchDetailsDataValidator.validate(request)).thenReturn(errors);
-
-        // Act
-        Mono<BranchDetailsLookupResponse> responseMono = branchDataService.performBranchLookup(request);
-
-        // Assert
-        StepVerifier.create(responseMono)
-                .expectErrorMatches(throwable -> throwable instanceof BadRequestException &&
-                        throwable.getMessage().contains("Invalid Country Code"))
-                .verify();
-    }
-
-    @Test
-    void testLookupBranchDetails() {
-        // Arrange
-        BranchDetailsLookupRequest request = new BranchDetailsLookupRequest();
-        request.setCountryCodes(List.of("US"));
-
-        BranchDetails branchDetails = new BranchDetails();
-        branchDetails.setCountryCode("US");
-
-        // Mock SearchHit for Elasticsearch response
-        SearchHit<BranchDetails> searchHit = mock(SearchHit.class);
-        when(searchHit.getContent()).thenReturn(branchDetails);
-
-        // Mock Elasticsearch search method
-        when(elasticsearchTemplate.search(any(Query.class), eq(BranchDetails.class), any(IndexCoordinates.class)))
-                .thenReturn(Flux.just(searchHit));
-
-        // Act
-        Flux<BranchDetails> branchDetailsFlux = branchDataService.lookupBranchDetails(request);
-
-        // Assert
-        StepVerifier.create(branchDetailsFlux)
-                .assertNext(foundBranchDetails -> {
-                    assertEquals("US", foundBranchDetails.getCountryCode());
+        StepVerifier.create(accountPurposeFlux)
+                .assertNext(foundAccountPurpose -> {
+                    assertEquals("001", foundAccountPurpose.getBranchCode());
+                    assertEquals("US", foundAccountPurpose.getCountryCode());
                 })
                 .verifyComplete();
     }
