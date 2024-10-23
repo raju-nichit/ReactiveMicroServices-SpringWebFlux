@@ -6,9 +6,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ReactiveElasticsearchTemplate;
 import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.data.elasticsearch.core.query.Query;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -19,70 +19,74 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CurrencyDataServiceTest {
+class BranchDataServiceTest {
 
     @InjectMocks
-    private CurrencyDataService currencyDataService;
+    private BranchDataService branchDataService;
 
     @Mock
-    private CurrencyRepo currencyRepo;
+    private BranchDetailsRepo branchDetailsRepo;
+
+    @Mock
+    private BranchesRepo branchesRepo;
 
     @Mock
     private ReactiveElasticsearchTemplate elasticsearchTemplate;
 
     @Mock
-    private CurrencyDataValidator currencyDataValidator;
+    private BranchDataValidator branchDataValidator;
+
+    @Mock
+    private BranchDetailsDataValidator branchDetailsDataValidator;
 
     @Test
-    void testFetchCurrency_validRequest() {
+    void testFetchBranches_validRequest() {
         // Arrange
-        CurrencyDataRequest request = new CurrencyDataRequest();
+        BranchDataRequest request = new BranchDataRequest();
         request.setBranchCode("001");
         request.setCountryCode("US");
-        request.setCurrencyCode("USD");
         request.setRequestId("12345");
 
-        Currency currency = new Currency();
-        currency.setBranchCode("001");
-        currency.setCountryCode("US");
-        currency.setCurrencyCode("USD");
+        Branches branches = new Branches();
+        branches.setBranchCode("001");
+        branches.setCountryCode("US");
 
         // Mock SearchHit for Elasticsearch response
-        SearchHit<Currency> searchHit = mock(SearchHit.class);
-        when(searchHit.getContent()).thenReturn(currency);
+        SearchHit<Branches> searchHit = mock(SearchHit.class);
+        when(searchHit.getContent()).thenReturn(branches);
 
         // Mock Elasticsearch search method
-        when(elasticsearchTemplate.search(any(Query.class), eq(Currency.class), any(IndexCoordinates.class)))
+        when(elasticsearchTemplate.search(any(Query.class), eq(Branches.class), any(IndexCoordinates.class)))
                 .thenReturn(Flux.just(searchHit));
 
-        // Mocking currencyDataValidator
-        when(currencyDataValidator.validate(request)).thenReturn(List.of());
+        // Mocking branchDataValidator
+        when(branchDataValidator.validate(request)).thenReturn(List.of());
 
         // Act
-        Mono<CurrencyDataResponse> responseMono = currencyDataService.fetchCurrency(request);
+        Mono<BranchDataResponse> responseMono = branchDataService.fetchBranches(request);
 
         // Assert
         StepVerifier.create(responseMono)
                 .assertNext(response -> {
                     assertEquals("12345", response.getRequestId());
-                    assertEquals("001", response.getSource()); // Assuming `request.getId()` returns "001"
-                    assertNotNull(response.getCurrencyData());
-                    assertEquals(1, response.getCurrencyData().size());
+                    assertEquals("001", response.getSource());  // Assuming `request.getSource()` returns "001"
+                    assertNotNull(response.getBranchesData());
+                    assertEquals(1, response.getBranchesData().size());
                 })
                 .verifyComplete();
     }
 
     @Test
-    void testFetchCurrency_invalidRequest() {
+    void testFetchBranches_invalidRequest() {
         // Arrange
-        CurrencyDataRequest request = new CurrencyDataRequest();
+        BranchDataRequest request = new BranchDataRequest();
         request.setRequestId("12345");
 
         List<String> errors = List.of("Invalid Branch Code");
-        when(currencyDataValidator.validate(request)).thenReturn(errors);
+        when(branchDataValidator.validate(request)).thenReturn(errors);
 
         // Act
-        Mono<CurrencyDataResponse> responseMono = currencyDataService.fetchCurrency(request);
+        Mono<BranchDataResponse> responseMono = branchDataService.fetchBranches(request);
 
         // Assert
         StepVerifier.create(responseMono)
@@ -92,35 +96,113 @@ class CurrencyDataServiceTest {
     }
 
     @Test
-    void testSearchCurrencyData() {
+    void testSearchBranchesData() {
         // Arrange
-        CurrencyDataRequest request = new CurrencyDataRequest();
+        BranchDataRequest request = new BranchDataRequest();
         request.setBranchCode("001");
         request.setCountryCode("US");
-        request.setCurrencyCode("USD");
 
-        Currency currency = new Currency();
-        currency.setBranchCode("001");
-        currency.setCountryCode("US");
-        currency.setCurrencyCode("USD");
+        Branches branches = new Branches();
+        branches.setBranchCode("001");
+        branches.setCountryCode("US");
 
         // Mock SearchHit for Elasticsearch response
-        SearchHit<Currency> searchHit = mock(SearchHit.class);
-        when(searchHit.getContent()).thenReturn(currency);
+        SearchHit<Branches> searchHit = mock(SearchHit.class);
+        when(searchHit.getContent()).thenReturn(branches);
 
         // Mock Elasticsearch search method
-        when(elasticsearchTemplate.search(any(Query.class), eq(Currency.class), any(IndexCoordinates.class)))
+        when(elasticsearchTemplate.search(any(Query.class), eq(Branches.class), any(IndexCoordinates.class)))
                 .thenReturn(Flux.just(searchHit));
 
         // Act
-        Flux<Currency> currencyFlux = currencyDataService.searchCurrencyData(request);
+        Flux<Branches> branchesFlux = branchDataService.searchBranchesData(request);
 
         // Assert
-        StepVerifier.create(currencyFlux)
-                .assertNext(foundCurrency -> {
-                    assertEquals("001", foundCurrency.getBranchCode());
-                    assertEquals("US", foundCurrency.getCountryCode());
-                    assertEquals("USD", foundCurrency.getCurrencyCode());
+        StepVerifier.create(branchesFlux)
+                .assertNext(foundBranch -> {
+                    assertEquals("001", foundBranch.getBranchCode());
+                    assertEquals("US", foundBranch.getCountryCode());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void testPerformBranchLookup_validRequest() {
+        // Arrange
+        BranchDetailsLookupRequest request = new BranchDetailsLookupRequest();
+        request.setCountryCodes(List.of("US"));
+        request.setRequestId("12345");
+
+        BranchDetails branchDetails = new BranchDetails();
+        branchDetails.setCountryCode("US");
+
+        // Mock SearchHit for Elasticsearch response
+        SearchHit<BranchDetails> searchHit = mock(SearchHit.class);
+        when(searchHit.getContent()).thenReturn(branchDetails);
+
+        // Mock Elasticsearch search method
+        when(elasticsearchTemplate.search(any(Query.class), eq(BranchDetails.class), any(IndexCoordinates.class)))
+                .thenReturn(Flux.just(searchHit));
+
+        // Mocking branchDetailsDataValidator
+        when(branchDetailsDataValidator.validate(request)).thenReturn(List.of());
+
+        // Act
+        Mono<BranchDetailsLookupResponse> responseMono = branchDataService.performBranchLookup(request);
+
+        // Assert
+        StepVerifier.create(responseMono)
+                .assertNext(response -> {
+                    assertEquals("12345", response.getRequestId());
+                    assertNotNull(response.getBranchDetailsData());
+                    assertEquals(1, response.getBranchDetailsData().size());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void testPerformBranchLookup_invalidRequest() {
+        // Arrange
+        BranchDetailsLookupRequest request = new BranchDetailsLookupRequest();
+        request.setRequestId("12345");
+
+        List<String> errors = List.of("Invalid Country Code");
+        when(branchDetailsDataValidator.validate(request)).thenReturn(errors);
+
+        // Act
+        Mono<BranchDetailsLookupResponse> responseMono = branchDataService.performBranchLookup(request);
+
+        // Assert
+        StepVerifier.create(responseMono)
+                .expectErrorMatches(throwable -> throwable instanceof BadRequestException &&
+                        throwable.getMessage().contains("Invalid Country Code"))
+                .verify();
+    }
+
+    @Test
+    void testLookupBranchDetails() {
+        // Arrange
+        BranchDetailsLookupRequest request = new BranchDetailsLookupRequest();
+        request.setCountryCodes(List.of("US"));
+
+        BranchDetails branchDetails = new BranchDetails();
+        branchDetails.setCountryCode("US");
+
+        // Mock SearchHit for Elasticsearch response
+        SearchHit<BranchDetails> searchHit = mock(SearchHit.class);
+        when(searchHit.getContent()).thenReturn(branchDetails);
+
+        // Mock Elasticsearch search method
+        when(elasticsearchTemplate.search(any(Query.class), eq(BranchDetails.class), any(IndexCoordinates.class)))
+                .thenReturn(Flux.just(searchHit));
+
+        // Act
+        Flux<BranchDetails> branchDetailsFlux = branchDataService.lookupBranchDetails(request);
+
+        // Assert
+        StepVerifier.create(branchDetailsFlux)
+                .assertNext(foundBranchDetails -> {
+                    assertEquals("US", foundBranchDetails.getCountryCode());
                 })
                 .verifyComplete();
     }
