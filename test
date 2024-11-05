@@ -1,4 +1,43 @@
-System.setProperty("javax.net.ssl.keyStore", "path/to/keystore.jks");
-System.setProperty("javax.net.ssl.keyStorePassword", "keystorepassword");
-System.setProperty("javax.net.ssl.trustStore", "path/to/truststore.jks");
-System.setProperty("javax.net.ssl.trustStorePassword", "truststorepassword");
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Base64;
+
+public class FileToBase64Converter {
+
+    public static void main(String[] args) {
+        // Define input and output file paths
+        String inputFilePath = "input_file.ext";    // Replace with your input file's path
+        String outputFilePath = "output_file.txt";  // Output file to save Base64 content
+
+        try {
+            // Convert file content to Base64
+            String base64Content = encodeFileToBase64(inputFilePath);
+
+            // Write the Base64 encoded content to output file
+            saveBase64ToFile(base64Content, outputFilePath);
+
+            System.out.println("File content has been encoded to Base64 and saved to " + outputFilePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to encode file content to Base64
+    public static String encodeFileToBase64(String filePath) throws IOException {
+        File file = new File(filePath);
+        try (FileInputStream fileInputStream = new FileInputStream(file)) {
+            byte[] fileBytes = new byte[(int) file.length()];
+            fileInputStream.read(fileBytes);
+            return Base64.getEncoder().encodeToString(fileBytes);
+        }
+    }
+
+    // Method to save Base64 content to a file
+    public static void saveBase64ToFile(String base64Content, String outputFilePath) throws IOException {
+        try (FileOutputStream outputStream = new FileOutputStream(outputFilePath)) {
+            outputStream.write(base64Content.getBytes());
+        }
+    }
+}
