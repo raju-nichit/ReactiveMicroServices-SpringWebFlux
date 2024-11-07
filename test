@@ -1,43 +1,22 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Base64;
+private Mono<Void> createErrorMessage(ServerWebExchange serverWebExchange, ErrorResponse errorResponse) {
 
-public class FileToBase64Converter {
+    serverWebExchange.getResponse().setRawStatusCode(HttpStatus.UNAUTHORIZED.value());
+    serverWebExchange.getResponse().getHeaders().add("Content-Type", "application/json");
 
-    public static void main(String[] args) {
-        // Define input and output file paths
-        String inputFilePath = "input_file.ext";    // Replace with your input file's path
-        String outputFilePath = "output_file.txt";  // Output file to save Base64 content
+    try {
+        // Write the generic error response to the client
+        return serverWebExchange.getResponse().writeWith(Flux.just(
+            serverWebExchange.getResponse().bufferFactory().wrap(objectMapper.writeValueAsBytes(errorResponse))
+        ));
 
-        try {
-            // Convert file content to Base64
-            String base64Content = encodeFileToBase64(inputFilePath);
+    } catch (JsonProcessingException e) {
+        // Log the exception internally without exposing details to the client
+        LoggerFactory.getLogger(this.getClass()).error("Error serializing ErrorResponse", e);
 
-            // Write the Base64 encoded content to output file
-            saveBase64ToFile(base64Content, outputFilePath);
-
-            System.out.println("File content has been encoded to Base64 and saved to " + outputFilePath);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    // Method to encode file content to Base64
-    public static String encodeFileToBase64(String filePath) throws IOException {
-        File file = new File(filePath);
-        try (FileInputStream fileInputStream = new FileInputStream(file)) {
-            byte[] fileBytes = new byte[(int) file.length()];
-            fileInputStream.read(fileBytes);
-            return Base64.getEncoder().encodeToString(fileBytes);
-        }
-    }
-
-    // Method to save Base64 content to a file
-    public static void saveBase64ToFile(String base64Content, String outputFilePath) throws IOException {
-        try (FileOutputStream outputStream = new FileOutputStream(outputFilePath)) {
-            outputStream.write(base64Content.getBytes());
-        }
+        // Provide a generic error message for the client
+        ErrorResponse genericErrorResponse = new ErrorResponse("An unexpected error occurred. Please try again later.");
+        return serverWebExchange.getResponse().writeWith(Flux.just(
+            serverWebExchange.getResponse().bufferFactory().wrap(objectMapper.writeValueAsBytes(genericErrorResponse))
+        ));
     }
 }
