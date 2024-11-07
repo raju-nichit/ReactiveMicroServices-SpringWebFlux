@@ -1,1 +1,5 @@
-"I apologize, Ramesh; it seems I missed his message."
+@BeforeEach
+public void setup() {
+    assertNotNull(objectMapper); // Ensure objectMapper is initialized
+    ReflectionTestUtils.setField(objectMapper, "fieldName", value);
+}
