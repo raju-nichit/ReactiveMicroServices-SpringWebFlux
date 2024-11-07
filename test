@@ -1,5 +1,1 @@
-@BeforeEach
-public void setup() {
-    assertNotNull(objectMapper); // Ensure objectMapper is initialized
-    ReflectionTestUtils.setField(objectMapper, "fieldName", value);
-}
+        excelFile = new File(PersonExcelTest.class.getResource("/test-data.xlsx").getFile());
