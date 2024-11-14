@@ -1,1 +1,11 @@
-        excelFile = new File(PersonExcelTest.class.getResource("/test-data.xlsx").getFile());
+@Component
+public class QueryResolver implements GraphQLQueryResolver {
+
+    public Mono<String> getUserProfile() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .filter(Authentication::isAuthenticated)
+                .map(auth -> "User profile for: " + auth.getName())
+                .switchIfEmpty(Mono.error(new RuntimeException("Unauthorized access")));
+    }
+}
