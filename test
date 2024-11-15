@@ -1,6 +1,7 @@
-public byte[] readAllBytes(InputStream inputStream) throws IOException {
-    try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
-        Files.copy(inputStream, buffer);
-        return buffer.toByteArray();
+ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    byte[] data = new byte[1024];
+    int bytesRead;
+    while ((bytesRead = inputStream.read(data, 0, data.length)) != -1) {
+        buffer.write(data, 0, bytesRead);
     }
-}
+    return buffer.toByteArray();
