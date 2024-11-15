@@ -1,7 +1,4 @@
-ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    byte[] data = new byte[1024];
-    int bytesRead;
-    while ((bytesRead = inputStream.read(data, 0, data.length)) != -1) {
-        buffer.write(data, 0, bytesRead);
-    }
-    return buffer.toByteArray();
+<properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+</properties>
