@@ -61,3 +61,74 @@ public class ReactiveApiService {
                 )));
     }
 }
+
+
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+
+@Service
+public class ReactiveApiService {
+
+    private final WebClient webClient;
+
+    public ReactiveApiService(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.build();
+    }
+
+    // Base URLs from application.properties
+    @Value("${auth.api.url}")
+    private String authApiUrl;
+
+    @Value("${account.update.api.url}")
+    private String accountUpdateApiUrl;
+
+    // Method to fetch the token
+    public Mono<String> fetchAuthToken() {
+        return webClient.post()
+                .uri(authApiUrl)
+                .header("UserId", "CRMOBTUSER_FID")
+                .retrieve()
+                .onStatus(HttpStatus::isError, this::handleError)
+                .toBodilessEntity()
+                .flatMap(response -> {
+                    String token = response.getHeaders().getFirst("token");
+                    if (token != null) {
+                        return Mono.just(token);
+                    } else {
+                        return Mono.error(new RuntimeException("Token header not found in response"));
+                    }
+                });
+    }
+
+    // Method to call the account update API
+    public Mono<String> updateAccountStatus(String token, String payload) {
+        return webClient.post()
+                .uri(accountUpdateApiUrl)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .bodyValue(payload)
+                .retrieve()
+                .onStatus(HttpStatus::isError, this::handleError)
+                .bodyToMono(String.class); // Assuming the response is a JSON string
+    }
+
+    // Unified error handler
+    private Mono<? extends Throwable> handleError(ClientResponse response) {
+        return response.bodyToMono(String.class)
+                .flatMap(errorBody -> Mono.error(new RuntimeException(
+                        "API call failed with status: " + response.statusCode() + " and body: " + errorBody
+                )));
+    }
+}
+
+//properites
+auth.api.url=https://dev.crmui.transactionservices.citigroup.net:9000/crmcommonapi/commonaservice/getToken
+account.update.api.url=https://dev.crmui.transactionservices.citigroup.net:9000/siebel-imp-rest/vi.0/service/CitieFlowUROFUpdates/AccNumUpd
+
