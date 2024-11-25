@@ -1,134 +1,55 @@
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
-@Service
-public class ReactiveApiService {
+    public Mono<Map<String, Object>> getDealDetails(String dealId, String productName, String status, String autoChecklistEnableFlag) {
+        String query = """
+            query GetDealDetails($filter: DealDataFilter!) {
+                GetDealDetails(dealDataFilter: $filter) {
+                    field1
+                    field2
+                }
+            }
+        """;
 
-    private final WebClient webClient;
+        Map<String, Object> variables = Map.of(
+            "filter", Map.of(
+                "dealId", dealId,
+                "lineItem", Map.of(
+                    "productName", productName,
+                    "status", status,
+                    "autoChecklistEnableFlag", autoChecklistEnableFlag
+                )
+            )
+        );
 
-    public ReactiveApiService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.build();
-    }
-
-    // Base URLs from application.properties
-    @Value("${auth.api.url}")
-    private String authApiUrl;
-
-    @Value("${account.update.api.url}")
-    private String accountUpdateApiUrl;
-
-    // Method to fetch the token
-    public Mono<String> fetchAuthToken() {
-        return webClient.post()
-                .uri(authApiUrl)
-                .header("UserId", "CRMOBTUSER_FID")
-                .retrieve()
-                .onStatus(HttpStatus::isError, this::handleError)
-                .toBodilessEntity()
-                .flatMap(response -> {
-                    String token = response.getHeaders().getFirst("token");
-                    if (token != null) {
-                        return Mono.just(token);
-                    } else {
-                        return Mono.error(new RuntimeException("Token header not found in response"));
-                    }
-                });
-    }
-
-    // Method to call the account update API
-    public Mono<String> updateAccountStatus(String token, String payload) {
-        return webClient.post()
-                .uri(accountUpdateApiUrl)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .bodyValue(payload)
-                .retrieve()
-                .onStatus(HttpStatus::isError, this::handleError)
-                .bodyToMono(String.class); // Assuming the response is a JSON string
-    }
-
-    // Unified error handler
-    private Mono<? extends Throwable> handleError(ClientResponse response) {
-        return response.bodyToMono(String.class)
-                .flatMap(errorBody -> Mono.error(new RuntimeException(
-                        "API call failed with status: " + response.statusCode() + " and body: " + errorBody
-                )));
+        return graphQlClient.document(query)
+                .variables(variables)
+                .retrieve("GetDealDetails")
+                .toEntity(Map.class); // Adjust the type if you have a specific DTO for the response
     }
 }
+4. Call the Service
+Inject the GraphQLService into a controller or another service to call the API.
 
-
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
+GraphQLController.java
+java
+Copy code
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-@Service
-public class ReactiveApiService {
+import java.util.Map;
 
-    private final WebClient webClient;
+@RestController
+public class GraphQLController {
 
-    public ReactiveApiService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.build();
+    private final GraphQLService graphQLService;
+
+    public GraphQLController(GraphQLService graphQLService) {
+        this.graphQLService = graphQLService;
     }
 
-    // Base URLs from application.properties
-    @Value("${auth.api.url}")
-    private String authApiUrl;
-
-    @Value("${account.update.api.url}")
-    private String accountUpdateApiUrl;
-
-    // Method to fetch the token
-    public Mono<String> fetchAuthToken() {
-        return webClient.post()
-                .uri(authApiUrl)
-                .header("UserId", "CRMOBTUSER_FID")
-                .retrieve()
-                .onStatus(HttpStatus::isError, this::handleError)
-                .toBodilessEntity()
-                .flatMap(response -> {
-                    String token = response.getHeaders().getFirst("token");
-                    if (token != null) {
-                        return Mono.just(token);
-                    } else {
-                        return Mono.error(new RuntimeException("Token header not found in response"));
-                    }
-                });
-    }
-
-    // Method to call the account update API
-    public Mono<String> updateAccountStatus(String token, String payload) {
-        return webClient.post()
-                .uri(accountUpdateApiUrl)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .bodyValue(payload)
-                .retrieve()
-                .onStatus(HttpStatus::isError, this::handleError)
-                .bodyToMono(String.class); // Assuming the response is a JSON string
-    }
-
-    // Unified error handler
-    private Mono<? extends Throwable> handleError(ClientResponse response) {
-        return response.bodyToMono(String.class)
-                .flatMap(errorBody -> Mono.error(new RuntimeException(
-                        "API call failed with status: " + response.statusCode() + " and body: " + errorBody
-                )));
-    }
-}
-
-//properites
-auth.api.url=https://dev.crmui.transactionservices.citigroup.net:9000/crmcommonapi/commonaservice/getToken
-account.update.api.url=https://dev.crmui.transactionservices.citigroup.net:9000/siebel-imp-rest/vi.0/service/CitieFlowUROFUpdates/AccNumUpd
-
+    @GetMapping("/deal-details")
+    public Mono<Map<String, Object>> getDealDetails(
+            @RequestParam String dealId,
+            @RequestParam String productName,
+            @RequestParam Strin
