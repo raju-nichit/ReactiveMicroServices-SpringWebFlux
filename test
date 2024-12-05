@@ -1,55 +1,8 @@
+ String response = webClient.get()
+                .uri("https://jsonplaceholder.typicode.com/posts/1") // Replace with your API URL
+                .retrieve()
+                .bodyToMono(String.class) // Parse response as a String
+                .block(); // Block for synchronous response
 
-    public Mono<Map<String, Object>> getDealDetails(String dealId, String productName, String status, String autoChecklistEnableFlag) {
-        String query = """
-            query GetDealDetails($filter: DealDataFilter!) {
-                GetDealDetails(dealDataFilter: $filter) {
-                    field1
-                    field2
-                }
-            }
-        """;
-
-        Map<String, Object> variables = Map.of(
-            "filter", Map.of(
-                "dealId", dealId,
-                "lineItem", Map.of(
-                    "productName", productName,
-                    "status", status,
-                    "autoChecklistEnableFlag", autoChecklistEnableFlag
-                )
-            )
-        );
-
-        return graphQlClient.document(query)
-                .variables(variables)
-                .retrieve("GetDealDetails")
-                .toEntity(Map.class); // Adjust the type if you have a specific DTO for the response
-    }
-}
-4. Call the Service
-Inject the GraphQLService into a controller or another service to call the API.
-
-GraphQLController.java
-java
-Copy code
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Mono;
-
-import java.util.Map;
-
-@RestController
-public class GraphQLController {
-
-    private final GraphQLService graphQLService;
-
-    public GraphQLController(GraphQLService graphQLService) {
-        this.graphQLService = graphQLService;
-    }
-
-    @GetMapping("/deal-details")
-    public Mono<Map<String, Object>> getDealDetails(
-            @RequestParam String dealId,
-            @RequestParam String productName,
-            @RequestParam Strin
+        // Print response
+        System.out.println(response);
