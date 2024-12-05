@@ -1,8 +1,67 @@
- String response = webClient.get()
-                .uri("https://jsonplaceholder.typicode.com/posts/1") // Replace with your API URL
-                .retrieve()
-                .bodyToMono(String.class) // Parse response as a String
-                .block(); // Block for synchronous response
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.web.client.RestTemplate;
 
-        // Print response
-        System.out.println(response);
+import javax.net.ssl.SSLContext;
+import java.io.File;
+
+public class RestTemplateWithPfx {
+
+    public static RestTemplate createRestTemplate(String pfxFilePath, String password) throws Exception {
+        // Load the PFX file into the keystore
+        File pfxFile = new File(pfxFilePath);
+        SSLContext sslContext = SSLContextBuilder.create()
+                .loadKeyMaterial(pfxFile, password.toCharArray(), password.toCharArray()) // KeyStore and key password
+                .build();
+
+        // Create SSL Socket Factory
+        SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
+
+        // Create HttpClient with the SSL Socket Factory
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setSSLSocketFactory(sslSocketFactory)
+                .build();
+
+        // Create a Request Factory with the HttpClient
+        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+
+        // Create RestTemplate
+        return new RestTemplate(requestFactory);
+    }
+
+    public static void main(String[] args) {
+        try {
+            // Path to your .pfx file
+            String pfxFilePath = "path/to/your/certificate.pfx";
+
+            // Password for the .pfx file
+            String password = "your-password";
+
+            // Create RestTemplate
+            RestTemplate restTemplate = createRestTemplate(pfxFilePath, password);
+
+            // Example API Call
+            String url = "https://your-secure-api.com/endpoint";
+            String response = restTemplate.getForObject(url, String.class);
+
+            System.out.println("Response: " + response);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+<dependency>
+    <groupId>org.apache.httpcomponents.client5</groupId>
+    <artifactId>httpclient5</artifactId>
+    <version>5.4-alpha2</version> <!-- Use the latest version -->
+</dependency>
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-web</artifactId>
+</dependency>
+
