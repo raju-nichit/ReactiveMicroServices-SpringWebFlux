@@ -6,42 +6,53 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import javax.net.ssl.SSLContext;
-import java.io.File;
+import java.io.InputStream;
+import java.security.KeyStore;
 
-public class RestTemplateWithPfx {
+public class RestTemplateWithKeyMaterial {
 
-    public static RestTemplate createRestTemplate(String pfxFilePath, String password) throws Exception {
-        // Load the PFX file into the keystore
-        File pfxFile = new File(pfxFilePath);
-        SSLContext sslContext = SSLContextBuilder.create()
-                .loadKeyMaterial(pfxFile, password.toCharArray(), password.toCharArray()) // KeyStore and key password
-                .build();
+    public static RestTemplate createRestTemplate(String resourcePath, String password) throws Exception {
+        // Load the keystore from resources folder
+        try (InputStream keyStoreStream = RestTemplateWithKeyMaterial.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (keyStoreStream == null) {
+                throw new IllegalArgumentException("File not found in resources: " + resourcePath);
+            }
 
-        // Create SSL Socket Factory
-        SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
+            // Load the KeyStore
+            KeyStore keyStore = KeyStore.getInstance("PKCS12"); // Use "JKS" for Java KeyStore
+            keyStore.load(keyStoreStream, password.toCharArray());
 
-        // Create HttpClient with the SSL Socket Factory
-        CloseableHttpClient httpClient = HttpClients.custom()
-                .setSSLSocketFactory(sslSocketFactory)
-                .build();
+            // Create SSL Context
+            SSLContext sslContext = SSLContextBuilder.create()
+                    .loadKeyMaterial(keyStore, password.toCharArray()) // KeyStore and key password
+                    .build();
 
-        // Create a Request Factory with the HttpClient
-        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+            // Create SSL Socket Factory
+            SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext);
 
-        // Create RestTemplate
-        return new RestTemplate(requestFactory);
+            // Create HttpClient with the SSL Socket Factory
+            CloseableHttpClient httpClient = HttpClients.custom()
+                    .setSSLSocketFactory(sslSocketFactory)
+                    .build();
+
+            // Create Request Factory
+            HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+
+            // Return RestTemplate
+            return new RestTemplate(requestFactory);
+        }
     }
 
     public static void main(String[] args) {
         try {
-            // Path to your .pfx file
-            String pfxFilePath = "path/to/your/certificate.pfx";
+            // Path to your .pfx file in resources folder
+            String resourcePath = "certs/your-certificate.pfx";
 
             // Password for the .pfx file
             String password = "your-password";
 
             // Create RestTemplate
-            RestTemplate restTemplate = createRestTemplate(pfxFilePath, password);
+            RestTemplate restTemplate = createRestTemplate(resourcePath, password);
 
             // Example API Call
             String url = "https://your-secure-api.com/endpoint";
@@ -53,15 +64,3 @@ public class RestTemplateWithPfx {
         }
     }
 }
-
-
-<dependency>
-    <groupId>org.apache.httpcomponents.client5</groupId>
-    <artifactId>httpclient5</artifactId>
-    <version>5.4-alpha2</version> <!-- Use the latest version -->
-</dependency>
-<dependency>
-    <groupId>org.springframework</groupId>
-    <artifactId>spring-web</artifactId>
-</dependency>
-
