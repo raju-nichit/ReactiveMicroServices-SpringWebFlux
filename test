@@ -1,71 +1,40 @@
-import org.w3c.dom.*;
-import javax.xml.parsers.*;
-import java.io.*;
+import org.springframework.stereotype.Service;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class XMLTransformer {
-    public static void main(String[] args) throws Exception {
-        // Original XML string
-        String xmlInput = "<UpdatePUPDetails>" +
-                "<AccountDetails>" +
-                "<AccountType>CDO#~#DR</AccountType>" +
-                "<Currency>USD</Currency>" +
-                "</AccountDetails>" +
-                "</UpdatePUPDetails>";
+@Service
+public class XmlRegexProcessingService {
 
-        // Parse the original XML
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        InputStream is = new ByteArrayInputStream(xmlInput.getBytes());
-        Document doc = builder.parse(is);
+    // Method to transform the input XML to the desired format
+    public String transformXmlUsingRegex(String inputXml) {
+        // Define the regex pattern to capture the AccountType and Currency inside the <AccountDetails> tag
+        String regex = "(<AccountDetails>\\s*<AccountType>)(.*?)(</AccountType>\\s*<Currency>)(.*?)(</Currency>\\s*</AccountDetails>)";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(inputXml);
 
-        // Extract the original AccountType and Currency
-        NodeList accountDetailsList = doc.getElementsByTagName("AccountDetails");
-        Node accountDetails = accountDetailsList.item(0);
-        NodeList childNodes = accountDetails.getChildNodes();
-        String accountType = null;
-        String currency = null;
+        // Replace the AccountType if it contains #~#
+        StringBuilder resultXml = new StringBuilder("<UpdatePUPDetails>");
 
-        // Loop through child nodes to extract values
-        for (int i = 0; i < childNodes.getLength(); i++) {
-            Node node = childNodes.item(i);
-            if (node.getNodeName().equals("AccountType")) {
-                accountType = node.getTextContent(); // CDO#~#DR
-            } else if (node.getNodeName().equals("Currency")) {
-                currency = node.getTextContent(); // USD
+        while (matcher.find()) {
+            // Capture the matched groups (AccountType, Currency)
+            String accountType = matcher.group(2);
+            String currency = matcher.group(4);
+
+            // Split the AccountType using the #~# delimiter
+            String[] accountTypes = accountType.split("#~#");
+
+            // For each split AccountType, create a new AccountDetails block
+            for (String type : accountTypes) {
+                resultXml.append(matcher.group(1))  // Opening <AccountDetails> and <AccountType>
+                          .append(type)               // AccountType (split value)
+                          .append(matcher.group(3))  // The <Currency> opening tag
+                          .append(currency)          // Currency value
+                          .append(matcher.group(5)); // Closing </Currency> and </AccountDetails>
             }
         }
 
-        // Split AccountType by #~#
-        String[] accountTypes = accountType.split("#~#");
+        resultXml.append("</UpdatePUPDetails>");
 
-        // Create the new XML structure
-        Element updatePUPDetails = doc.createElement("UpdatePUPDetails");
-
-        for (String type : accountTypes) {
-            Element newAccountDetails = doc.createElement("AccountDetails");
-
-            Element newAccountType = doc.createElement("AccountType");
-            newAccountType.setTextContent(type);
-
-            Element newCurrency = doc.createElement("Currency");
-            newCurrency.setTextContent(currency);
-
-            newAccountDetails.appendChild(newAccountType);
-            newAccountDetails.appendChild(newCurrency);
-
-            updatePUPDetails.appendChild(newAccountDetails);
-        }
-
-        // Create a new document for output
-        Document newDoc = builder.newDocument();
-        newDoc.appendChild(updatePUPDetails);
-
-        // Convert the new XML document to a string and print it
-        TransformerFactory transformerFactory = TransformerFactory.newInstance();
-        Transformer transformer = transformerFactory.newTransformer();
-        StringWriter writer = new StringWriter();
-        transformer.transform(new DOMSource(newDoc), new StreamResult(writer));
-
-        System.out.println(writer.toString());
+        return resultXml.toString();
     }
 }
