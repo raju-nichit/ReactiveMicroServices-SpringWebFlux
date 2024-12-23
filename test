@@ -5,35 +5,37 @@ import java.util.regex.Pattern;
 @Service
 public class XmlRegexProcessingService {
 
-    // Method to transform the input XML to the desired format
+    // Method to transform the input XML to the desired format using StringBuilder and regex
     public String transformXmlUsingRegex(String inputXml) {
-        // Define the regex pattern to capture the AccountType and Currency inside the <AccountDetails> tag
+        // Create a StringBuilder for the result (we will modify this directly)
+        StringBuilder resultXml = new StringBuilder(inputXml);
+        
+        // Define the regex pattern to capture the AccountType and Currency inside <AccountDetails> tag
         String regex = "(<AccountDetails>\\s*<AccountType>)(.*?)(</AccountType>\\s*<Currency>)(.*?)(</Currency>\\s*</AccountDetails>)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(inputXml);
 
-        // Replace the AccountType if it contains #~#
-        StringBuilder resultXml = new StringBuilder("<UpdatePUPDetails>");
-
+        // Loop through all matches and process them
+        int offset = 0; // Track the position in the original string
         while (matcher.find()) {
-            // Capture the matched groups (AccountType, Currency)
+            // Capture the matched groups (AccountType and Currency)
             String accountType = matcher.group(2);
             String currency = matcher.group(4);
 
             // Split the AccountType using the #~# delimiter
             String[] accountTypes = accountType.split("#~#");
 
-            // For each split AccountType, create a new AccountDetails block
+            // Remove the original <AccountDetails> block in the StringBuilder
+            resultXml.delete(matcher.start() + offset, matcher.end() + offset);
+            
+            // For each split AccountType, insert a new AccountDetails block
             for (String type : accountTypes) {
-                resultXml.append(matcher.group(1))  // Opening <AccountDetails> and <AccountType>
-                          .append(type)               // AccountType (split value)
-                          .append(matcher.group(3))  // The <Currency> opening tag
-                          .append(currency)          // Currency value
-                          .append(matcher.group(5)); // Closing </Currency> and </AccountDetails>
+                // Rebuild the AccountDetails block with the new AccountType and original Currency
+                String newAccountDetails = matcher.group(1) + type + matcher.group(3) + currency + matcher.group(5);
+                resultXml.insert(matcher.start() + offset, newAccountDetails);
+                offset += newAccountDetails.length(); // Adjust the offset based on the new block length
             }
         }
-
-        resultXml.append("</UpdatePUPDetails>");
 
         return resultXml.toString();
     }
