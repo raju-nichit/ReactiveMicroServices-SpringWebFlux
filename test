@@ -18,7 +18,10 @@ public class XMLConverter {
                 </UpdateDUPDetails>
                 """;
 
-        String regex = "(<AccountDetails>\\s*<AccountType>)([^<]+)#~#([^<]+)(</AccountType>\\s*<Currency>USD</Currency>\\s*</AccountDetails>)";
+        // Regex to match the AccountDetails with #~#
+        String regex = "(<AccountDetails>\\s*<AccountType>)([^#~#]+)#~#([^<]+)(</AccountType>\\s*<Currency>USD</Currency>\\s*</AccountDetails>)";
+        
+        // Replacement string to split the AccountType values into separate AccountDetails blocks
         String replacement = """
                 $1$2</AccountType>
                 <Currency>USD</Currency>
@@ -29,10 +32,12 @@ public class XMLConverter {
                 </AccountDetails>
                 """;
 
-        Pattern pattern = Pattern.compile(regex);
+        // Apply the regex to the input XML
+        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(inputXml);
         String outputXml = matcher.replaceAll(replacement);
 
+        // Print the result
         System.out.println(outputXml);
     }
 }
