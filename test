@@ -1,1 +1,82 @@
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class XMLConverter {
+    public static void main(String[] args) {
+        String inputXml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <ns:TTSKYCDealInitiationRequest xmlns:ns="http://ttsRequest.citikyc.interfaces.citigroup.net/schema/1.0/TTSCaseCreationRequest">
+                
+                <CaseRequestHeader>
+                
+                <CommonHeaderElements>
+                
+                <SessionId>1-33YUWGC</SessionId>
+                
+                <SourceSystemId>CRM</SourceSystemId>
+                
+                <ComponentType>APPX</ComponentType>
+                
+                <WorkItemAction>ADD_PRODUCTS_AND_SERVICES</WorkItemAction>
+                
+                <ClientID>1013556403</ClientID>
+                
+                <ClientIDType>GFCID</ClientIDType>
+                
+                <KYCID/>
+                
+                <AppendixId/>
+                
+                <CountryOfCitiService>IN</CountryOfCitiService>
+                
+                <AdditionalCountryId>SO</AdditionalCountryId>
+                
+                <DealId>1-33YU2HS</DealId>
+                
+                <ParentDealId>1-33YU2HS</ParentDealId>
+                
+                <ClientChannel>CDDD</ClientChannel>
+                </CommonHeaderElements>
+                
+                </CaseRequestHeader>
+                <UpdatePUPDetails>
+                <AccountDetails>
+                <AccountType>CDO#~#DR</AccountType>
+                <Currency>USD</Currency>
+                </AccountDetails>
+                </UpdatePUPDetails>
+                <UpdatePUPDetails>
+                <AccountDetails>
+                <AccountType>CJ#~#RJ</AccountType>
+                <Currency>EUR</Currency>
+                </AccountDetails>
+                </UpdatePUPDetails>
+                </ns:TTSKYCDealInitiationRequest>
+                """;
+
+        // Regex to split AccountType with "#~#" and restructure XML properly
+        String regex = "(<AccountDetails>\\s*<AccountType>)([^#~#]+)#~#([^<]+)(</AccountType>\\s*<Currency>)([^<]+)(</Currency>\\s*</AccountDetails>)";
+
+        // Correct replacement pattern
+        String replacement = """
+                $1$2$4$5$6
+                <AccountDetails>
+                <AccountType>$3</AccountType>
+                <Currency>$5</Currency>
+                </AccountDetails>
+                """;
+
+        // Apply the regex transformation
+        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(inputXml);
+        String transformedXml = matcher.replaceAll(replacement);
+
+        // Final cleanup step to ensure no redundant tags
+        String cleanupRegex = "(</AccountDetails>\\s*){2,}";
+        String cleanedXml = transformedXml.replaceAll(cleanupRegex, "</AccountDetails>\n");
+
+        // Output the final XML
+        System.out.println(cleanedXml);
+    }
+}
