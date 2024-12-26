@@ -1,42 +1,38 @@
-import org.springframework.stereotype.Service;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Service
-public class XmlRegexProcessingService {
+public class XMLConverter {
+    public static void main(String[] args) {
+        String inputXml = """
+                <UpdatePUPDetails>
+                <AccountDetails>
+                <AccountType>CDO#~#DR</AccountType>
+                <Currency>USD</Currency>
+                </AccountDetails>
+                </UpdatePUPDetails>
+                <UpdateDUPDetails>
+                <AccountDetails>
+                <AccountType>RJ#~#CJ</AccountType>
+                <Currency>USD</Currency>
+                </AccountDetails>
+                </UpdateDUPDetails>
+                """;
 
-    // Method to transform the input XML to the desired format using StringBuilder and regex
-    public String transformXmlUsingRegex(String inputXml) {
-        // Create a StringBuilder for the result (we will modify this directly)
-        StringBuilder resultXml = new StringBuilder(inputXml);
-        
-        // Define the regex pattern to capture the AccountType and Currency inside <AccountDetails> tag
-        String regex = "(<AccountDetails>\\s*<AccountType>)(.*?)(</AccountType>\\s*<Currency>)(.*?)(</Currency>\\s*</AccountDetails>)";
+        String regex = "(<AccountDetails>\\s*<AccountType>)([^<]+)#~#([^<]+)(</AccountType>\\s*<Currency>USD</Currency>\\s*</AccountDetails>)";
+        String replacement = """
+                $1$2</AccountType>
+                <Currency>USD</Currency>
+                </AccountDetails>
+                <AccountDetails>
+                <AccountType>$3</AccountType>
+                <Currency>USD</Currency>
+                </AccountDetails>
+                """;
+
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(inputXml);
+        String outputXml = matcher.replaceAll(replacement);
 
-        // Loop through all matches and process them
-        int offset = 0; // Track the position in the original string
-        while (matcher.find()) {
-            // Capture the matched groups (AccountType and Currency)
-            String accountType = matcher.group(2);
-            String currency = matcher.group(4);
-
-            // Split the AccountType using the #~# delimiter
-            String[] accountTypes = accountType.split("#~#");
-
-            // Remove the original <AccountDetails> block in the StringBuilder
-            resultXml.delete(matcher.start() + offset, matcher.end() + offset);
-            
-            // For each split AccountType, insert a new AccountDetails block
-            for (String type : accountTypes) {
-                // Rebuild the AccountDetails block with the new AccountType and original Currency
-                String newAccountDetails = matcher.group(1) + type + matcher.group(3) + currency + matcher.group(5);
-                resultXml.insert(matcher.start() + offset, newAccountDetails);
-                offset += newAccountDetails.length(); // Adjust the offset based on the new block length
-            }
-        }
-
-        return resultXml.toString();
+        System.out.println(outputXml);
     }
 }
