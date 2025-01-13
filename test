@@ -1,82 +1,61 @@
+import org.w3c.dom.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.StringWriter;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-public class XMLConverter {
-    public static void main(String[] args) {
-        String inputXml = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <ns:TTSKYCDealInitiationRequest xmlns:ns="http://ttsRequest.citikyc.interfaces.citigroup.net/schema/1.0/TTSCaseCreationRequest">
-                
-                <CaseRequestHeader>
-                
-                <CommonHeaderElements>
-                
-                <SessionId>1-33YUWGC</SessionId>
-                
-                <SourceSystemId>CRM</SourceSystemId>
-                
-                <ComponentType>APPX</ComponentType>
-                
-                <WorkItemAction>ADD_PRODUCTS_AND_SERVICES</WorkItemAction>
-                
-                <ClientID>1013556403</ClientID>
-                
-                <ClientIDType>GFCID</ClientIDType>
-                
-                <KYCID/>
-                
-                <AppendixId/>
-                
-                <CountryOfCitiService>IN</CountryOfCitiService>
-                
-                <AdditionalCountryId>SO</AdditionalCountryId>
-                
-                <DealId>1-33YU2HS</DealId>
-                
-                <ParentDealId>1-33YU2HS</ParentDealId>
-                
-                <ClientChannel>CDDD</ClientChannel>
-                </CommonHeaderElements>
-                
-                </CaseRequestHeader>
+public class XMLTransformer {
+    public static void main(String[] args) throws Exception {
+        String inputXML = """
                 <UpdatePUPDetails>
-                <AccountDetails>
-                <AccountType>CDO#~#DR</AccountType>
-                <Currency>USD</Currency>
-                </AccountDetails>
+                    <AccountDetails>
+                        <AccountType>CDO##DR##CR</AccountType>
+                        <Currency>USD</Currency>
+                    </AccountDetails>
                 </UpdatePUPDetails>
-                <UpdatePUPDetails>
-                <AccountDetails>
-                <AccountType>CJ#~#RJ</AccountType>
-                <Currency>EUR</Currency>
-                </AccountDetails>
-                </UpdatePUPDetails>
-                </ns:TTSKYCDealInitiationRequest>
                 """;
 
-        // Regex to split AccountType with "#~#" and restructure XML properly
-        String regex = "(<AccountDetails>\\s*<AccountType>)([^#~#]+)#~#([^<]+)(</AccountType>\\s*<Currency>)([^<]+)(</Currency>\\s*</AccountDetails>)";
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document document = builder.parse(new java.io.ByteArrayInputStream(inputXML.getBytes()));
 
-        // Correct replacement pattern
-        String replacement = """
-                $1$2$4$5$6
-                <AccountDetails>
-                <AccountType>$3</AccountType>
-                <Currency>$5</Currency>
-                </AccountDetails>
-                """;
+        NodeList accountDetailsList = document.getElementsByTagName("AccountDetails");
+        Document newDocument = builder.newDocument();
+        Element root = newDocument.createElement("UpdatePUPDetails");
+        newDocument.appendChild(root);
 
-        // Apply the regex transformation
-        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(inputXml);
-        String transformedXml = matcher.replaceAll(replacement);
+        for (int i = 0; i < accountDetailsList.getLength(); i++) {
+            Element accountDetails = (Element) accountDetailsList.item(i);
+            String accountTypeText = accountDetails.getElementsByTagName("AccountType").item(0).getTextContent();
+            String currencyText = accountDetails.getElementsByTagName("Currency").item(0).getTextContent();
 
-        // Final cleanup step to ensure no redundant tags
-        String cleanupRegex = "(</AccountDetails>\\s*){2,}";
-        String cleanedXml = transformedXml.replaceAll(cleanupRegex, "</AccountDetails>\n");
+            // Split the AccountType value
+            String[] accountTypes = accountTypeText.split("##");
 
-        // Output the final XML
-        System.out.println(cleanedXml);
+            for (String accountType : accountTypes) {
+                Element newAccountDetails = newDocument.createElement("AccountDetails");
+                Element newAccountType = newDocument.createElement("AccountType");
+                newAccountType.setTextContent(accountType);
+                Element newCurrency = newDocument.createElement("Currency");
+                newCurrency.setTextContent(currencyText);
+
+                newAccountDetails.appendChild(newAccountType);
+                newAccountDetails.appendChild(newCurrency);
+                root.appendChild(newAccountDetails);
+            }
+        }
+
+        // Convert the new Document to a String
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        DOMSource source = new DOMSource(newDocument);
+        StringWriter writer = new StringWriter();
+        StreamResult result = new StreamResult(writer);
+        transformer.transform(source, result);
+
+        System.out.println(writer.toString());
     }
 }
