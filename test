@@ -9,12 +9,20 @@ import java.io.StringWriter;
 public class XMLTransformer {
     public static void main(String[] args) throws Exception {
         String inputXML = """
-                <UpdatePUPDetails>
-                    <AccountDetails>
-                        <AccountType>CDO##DR##CR</AccountType>
-                        <Currency>USD</Currency>
-                    </AccountDetails>
-                </UpdatePUPDetails>
+                <Root>
+                    <Header>
+                        <Info>Header Information</Info>
+                    </Header>
+                    <UpdatePUPDetails>
+                        <AccountDetails>
+                            <AccountType>CDO##DR##CR</AccountType>
+                            <Currency>USD</Currency>
+                        </AccountDetails>
+                    </UpdatePUPDetails>
+                    <Footer>
+                        <Info>Footer Information</Info>
+                    </Footer>
+                </Root>
                 """;
 
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -22,9 +30,6 @@ public class XMLTransformer {
         Document document = builder.parse(new java.io.ByteArrayInputStream(inputXML.getBytes()));
 
         NodeList accountDetailsList = document.getElementsByTagName("AccountDetails");
-        Document newDocument = builder.newDocument();
-        Element root = newDocument.createElement("UpdatePUPDetails");
-        newDocument.appendChild(root);
 
         for (int i = 0; i < accountDetailsList.getLength(); i++) {
             Element accountDetails = (Element) accountDetailsList.item(i);
@@ -34,16 +39,21 @@ public class XMLTransformer {
             // Split the AccountType value
             String[] accountTypes = accountTypeText.split("##");
 
+            // Get the parent node of <AccountDetails> and remove the old <AccountDetails> node
+            Node parentNode = accountDetails.getParentNode();
+            parentNode.removeChild(accountDetails);
+
+            // Create new <AccountDetails> nodes for each AccountType and append to the parent node
             for (String accountType : accountTypes) {
-                Element newAccountDetails = newDocument.createElement("AccountDetails");
-                Element newAccountType = newDocument.createElement("AccountType");
+                Element newAccountDetails = document.createElement("AccountDetails");
+                Element newAccountType = document.createElement("AccountType");
                 newAccountType.setTextContent(accountType);
-                Element newCurrency = newDocument.createElement("Currency");
+                Element newCurrency = document.createElement("Currency");
                 newCurrency.setTextContent(currencyText);
 
                 newAccountDetails.appendChild(newAccountType);
                 newAccountDetails.appendChild(newCurrency);
-                root.appendChild(newAccountDetails);
+                parentNode.appendChild(newAccountDetails);
             }
         }
 
@@ -51,7 +61,7 @@ public class XMLTransformer {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        DOMSource source = new DOMSource(newDocument);
+        DOMSource source = new DOMSource(document);
         StringWriter writer = new StringWriter();
         StreamResult result = new StreamResult(writer);
         transformer.transform(source, result);
