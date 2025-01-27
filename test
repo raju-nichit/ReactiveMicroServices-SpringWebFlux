@@ -1,37 +1,46 @@
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+@RestController
+@RequestMapping("/api/pdf")
+public class PdfController {
 
-public Mono<String> getExternalData() {
-    return webClient.get()
-                    .uri("/endpoint")
-                    .headers(headers -> {
-                        headers.add("Authorization", "Bearer your-token");
-                        headers.add("Custom-Header", "CustomValue");
-                        headers.add("Another-Header", "AnotherValue");
-                    })
-                    .retrieve()
-                    .onStatus(
-                        status -> status.is4xxClientError() || status.is5xxServerError(),
-                        clientResponse -> clientResponse.bodyToMono(String.class)
-                                                         .flatMap(errorBody -> {
-                                                             // Log the full error response
-                                                             System.err.println("Error response body: " + errorBody);
-                                                             return Mono.error(new RuntimeException("Error response: " + errorBody));
-                                                         })
-                    )
-                    .bodyToMono(String.class)
-                    .onErrorResume(ex -> {
-                        // Check if the exception has a response body
-                        if (ex instanceof WebClientResponseException) {
-                            WebClientResponseException responseException = (WebClientResponseException) ex;
-                            String responseBody = responseException.getResponseBodyAsString();
-                            System.err.println("Captured error body in onErrorResume: " + responseBody);
-                            // Return a fallback or the captured error body
-                            return Mono.just("Fallback response with error body: " + responseBody);
-                        } else {
-                            System.err.println("General error: " + ex.getMessage());
-                            // Return a generic fallback response
-                            return Mono.just("Fallback response on general error");
-                        }
-                    });
+    @PostMapping("/convert")
+    public ResponseEntity<String> convertToPdf(@RequestBody Map<String, Object> request) {
+        try {
+            // Extract the XML content
+            String xmlContent = (String) request.get("XML");
+
+            // Parse XML and extract OpptyFileBuffer
+            String base64Content = extractBase64FromXml(xmlContent);
+
+            // Decode Base64 content
+            byte[] pdfContent = Base64.getDecoder().decode(base64Content);
+
+            // Save as PDF file
+            String filePath = saveAsPdf(pdfContent, "output.pdf");
+
+            return ResponseEntity.ok("PDF created successfully at: " + filePath);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error occurred: " + e.getMessage());
+        }
+    }
+
+    private String extractBase64FromXml(String xmlContent) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        InputStream inputStream = new ByteArrayInputStream(xmlContent.getBytes(StandardCharsets.UTF_8));
+        Document document = builder.parse(inputStream);
+
+        NodeList nodeList = document.getElementsByTagName("OpptyFileBuffer");
+        if (nodeList.getLength() == 0) {
+            throw new Exception("OpptyFileBuffer not found in XML");
+        }
+        Element element = (Element) nodeList.item(0);
+        return element.getTextContent().trim();
+    }
+
+    private String saveAsPdf(byte[] content, String fileName) throws IOException {
+        Path path = Paths.get(System.getProperty("user.dir"), fileName);
+        Files.write(path, content);
+        return path.toAbsolutePath().toString();
+    }
 }
