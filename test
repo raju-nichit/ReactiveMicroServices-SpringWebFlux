@@ -1,46 +1,56 @@
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/pdf")
-public class PdfController {
+@RequestMapping("/api/reactive-pdf")
+public class ReactivePdfController {
 
-    @PostMapping("/convert")
-    public ResponseEntity<String> convertToPdf(@RequestBody Map<String, Object> request) {
-        try {
-            // Extract the XML content
-            String xmlContent = (String) request.get("XML");
+    @PostMapping(value = "/convert", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<byte[]>> convertToPdf(@RequestBody Mono<Map<String, Object>> request) {
+        return request.flatMap(req -> {
+            try {
+                // Extract XML from JSON
+                String xmlContent = (String) req.get("XML");
 
-            // Parse XML and extract OpptyFileBuffer
-            String base64Content = extractBase64FromXml(xmlContent);
+                // Parse XML reactively and get Base64 content
+                String base64Content = extractBase64FromXml(xmlContent);
 
-            // Decode Base64 content
-            byte[] pdfContent = Base64.getDecoder().decode(base64Content);
+                // Decode Base64 content to byte array
+                byte[] pdfContent = Base64.getDecoder().decode(base64Content);
 
-            // Save as PDF file
-            String filePath = saveAsPdf(pdfContent, "output.pdf");
-
-            return ResponseEntity.ok("PDF created successfully at: " + filePath);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error occurred: " + e.getMessage());
-        }
+                // Return PDF content in response
+                return Mono.just(ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"output.pdf\"")
+                        .contentType(MediaType.APPLICATION_PDF)
+                        .body(pdfContent));
+            } catch (Exception e) {
+                return Mono.just(ResponseEntity.internalServerError()
+                        .body(("Error processing request: " + e.getMessage()).getBytes(StandardCharsets.UTF_8)));
+            }
+        });
     }
 
     private String extractBase64FromXml(String xmlContent) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
-        InputStream inputStream = new ByteArrayInputStream(xmlContent.getBytes(StandardCharsets.UTF_8));
-        Document document = builder.parse(inputStream);
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(xmlContent.getBytes(StandardCharsets.UTF_8));
+        var document = builder.parse(inputStream);
 
-        NodeList nodeList = document.getElementsByTagName("OpptyFileBuffer");
+        var nodeList = document.getElementsByTagName("OpptyFileBuffer");
         if (nodeList.getLength() == 0) {
             throw new Exception("OpptyFileBuffer not found in XML");
         }
-        Element element = (Element) nodeList.item(0);
+        var element = (org.w3c.dom.Element) nodeList.item(0);
         return element.getTextContent().trim();
-    }
-
-    private String saveAsPdf(byte[] content, String fileName) throws IOException {
-        Path path = Paths.get(System.getProperty("user.dir"), fileName);
-        Files.write(path, content);
-        return path.toAbsolutePath().toString();
     }
 }
