@@ -1,56 +1,17 @@
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
+@Service
+public class FileService {
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Map;
+    public String encodeFileToBase64(String filePath) throws IOException {
+        File file = new File(filePath);
+        byte[] fileBytes = Files.readAllBytes(file.toPath());
+        System.out.println(new String(fileBytes));
+        String out = Base64.getEncoder().encodeToString(fileBytes);
+		System.out.println();
+        
+        
+        System.out.println("Decoded passwords:");
+        System.out.println(new String(Base64.getDecoder().decode(out)));
 
-@RestController
-@RequestMapping("/api/reactive-pdf")
-public class ReactivePdfController {
-
-    @PostMapping(value = "/convert", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<byte[]>> convertToPdf(@RequestBody Mono<Map<String, Object>> request) {
-        return request.flatMap(req -> {
-            try {
-                // Extract XML from JSON
-                String xmlContent = (String) req.get("XML");
-
-                // Parse XML reactively and get Base64 content
-                String base64Content = extractBase64FromXml(xmlContent);
-
-                // Decode Base64 content to byte array
-                byte[] pdfContent = Base64.getDecoder().decode(base64Content);
-
-                // Return PDF content in response
-                return Mono.just(ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"output.pdf\"")
-                        .contentType(MediaType.APPLICATION_PDF)
-                        .body(pdfContent));
-            } catch (Exception e) {
-                return Mono.just(ResponseEntity.internalServerError()
-                        .body(("Error processing request: " + e.getMessage()).getBytes(StandardCharsets.UTF_8)));
-            }
-        });
-    }
-
-    private String extractBase64FromXml(String xmlContent) throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        ByteArrayInputStream inputStream = new ByteArrayInputStream(xmlContent.getBytes(StandardCharsets.UTF_8));
-        var document = builder.parse(inputStream);
-
-        var nodeList = document.getElementsByTagName("OpptyFileBuffer");
-        if (nodeList.getLength() == 0) {
-            throw new Exception("OpptyFileBuffer not found in XML");
-        }
-        var element = (org.w3c.dom.Element) nodeList.item(0);
-        return element.getTextContent().trim();
+        return out;
     }
 }
