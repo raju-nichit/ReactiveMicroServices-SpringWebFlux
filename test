@@ -10,10 +10,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
-public class WorkflowServiceTest {
+public class CreditCheckServiceTest {
 
     @Mock
-    private WebClient workFlowEventWebClient;
+    private WebClient creditCheckGfcDetailsWebClient;
 
     @Mock
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
@@ -22,13 +22,13 @@ public class WorkflowServiceTest {
     private WebClient.RequestBodySpec requestBodySpec;
 
     @Mock
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
+    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
 
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
     @InjectMocks
-    private WorkflowService workflowService; // Replace with your actual service class
+    private CreditCheckService creditCheckService;  // Replace with your actual service class
 
     @BeforeEach
     void setUp() {
@@ -36,36 +36,40 @@ public class WorkflowServiceTest {
     }
 
     @Test
-    void testPostWorkflowEventSuccess() {
-        EventRequestDetails eventRequestDetails = new EventRequestDetails(); // Replace with actual object creation
-        String expectedResponse = "Success";
+    void testGetGfcDetailsSuccess() {
+        String requestId = "12345";
+        String expectedResponse = "GFC Details Success";
 
-        when(workFlowEventWebClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/dataservice/workflowevents")).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(eventRequestDetails)).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        // Mocking WebClient call chain
+        when(creditCheckGfcDetailsWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(expectedResponse));
 
-        String response = workflowService.postWorkflowEvent(eventRequestDetails).block();
+        // Execute the method
+        String response = creditCheckService.getGfcDetails(requestId).block();
 
+        // Assertions
         assertEquals(expectedResponse, response);
+        verify(creditCheckGfcDetailsWebClient, times(1)).post();
     }
 
     @Test
-    void testPostWorkflowEventError() {
-        EventRequestDetails eventRequestDetails = new EventRequestDetails(); // Replace with actual object creation
+    void testGetGfcDetailsError() {
+        String requestId = "12345";
         WebClientResponseException exception = WebClientResponseException.create(500, "Internal Server Error", null, null, null);
 
-        when(workFlowEventWebClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri("/dataservice/workflowevents")).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(eventRequestDetails)).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        // Mocking WebClient to throw an error
+        when(creditCheckGfcDetailsWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.error(exception));
 
-        String response = workflowService.postWorkflowEvent(eventRequestDetails).block();
+        // Execute the method
+        String response = creditCheckService.getGfcDetails(requestId).block();
 
-        assertNull(response); // Assuming handleErrorResponse returns Mono.empty()
+        // Assuming handleErrorResponse returns Mono.empty()
+        assertNull(response);
+        verify(creditCheckGfcDetailsWebClient, times(1)).post();
     }
 }
