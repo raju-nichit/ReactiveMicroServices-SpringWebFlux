@@ -1,17 +1,71 @@
-@Service
-public class FileService {
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-    public String encodeFileToBase64(String filePath) throws IOException {
-        File file = new File(filePath);
-        byte[] fileBytes = Files.readAllBytes(file.toPath());
-        System.out.println(new String(fileBytes));
-        String out = Base64.getEncoder().encodeToString(fileBytes);
-		System.out.println();
-        
-        
-        System.out.println("Decoded passwords:");
-        System.out.println(new String(Base64.getDecoder().decode(out)));
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
-        return out;
+public class WorkflowServiceTest {
+
+    @Mock
+    private WebClient workFlowEventWebClient;
+
+    @Mock
+    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+
+    @Mock
+    private WebClient.RequestBodySpec requestBodySpec;
+
+    @Mock
+    private WebClient.RequestHeadersSpec requestHeadersSpec;
+
+    @Mock
+    private WebClient.ResponseSpec responseSpec;
+
+    @InjectMocks
+    private WorkflowService workflowService; // Replace with your actual service class
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testPostWorkflowEventSuccess() {
+        EventRequestDetails eventRequestDetails = new EventRequestDetails(); // Replace with actual object creation
+        String expectedResponse = "Success";
+
+        when(workFlowEventWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri("/dataservice/workflowevents")).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(eventRequestDetails)).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(expectedResponse));
+
+        String response = workflowService.postWorkflowEvent(eventRequestDetails).block();
+
+        assertEquals(expectedResponse, response);
+    }
+
+    @Test
+    void testPostWorkflowEventError() {
+        EventRequestDetails eventRequestDetails = new EventRequestDetails(); // Replace with actual object creation
+        WebClientResponseException exception = WebClientResponseException.create(500, "Internal Server Error", null, null, null);
+
+        when(workFlowEventWebClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri("/dataservice/workflowevents")).thenReturn(requestBodySpec);
+        when(requestBodySpec.bodyValue(eventRequestDetails)).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.error(exception));
+
+        String response = workflowService.postWorkflowEvent(eventRequestDetails).block();
+
+        assertNull(response); // Assuming handleErrorResponse returns Mono.empty()
     }
 }
