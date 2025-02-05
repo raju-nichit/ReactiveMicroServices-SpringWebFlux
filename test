@@ -1,86 +1,24 @@
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 
-import java.util.function.Function;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class CreditCheckServiceTest {
-
-    @Mock
-    private WebClient creditCheckScopeDetailsWebClient;
-
-    @Mock
-    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
-
-    @Mock
-    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
-
-    @Mock
-    private WebClient.ResponseSpec responseSpec;
-
-    @InjectMocks
-    private CreditCheckService creditCheckService;  // Replace with your actual service class
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
+public class FileReadTest {
 
     @Test
-    void testGetScopeDetailsSuccess() {
-        String dealId = "12345";
-        String accessToken = "token123";
-        String expectedResponse = "Scope Details Success";
+    void readFileUsingPaths() throws Exception {
+        // Use ClassLoader to get the file path
+        String filePath = getClass().getClassLoader().getResource("testfile.txt").toURI().getPath();
+        
+        // Read all lines from the file
+        String content = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
 
-        // Mocking the WebClient chain correctly
-        when(creditCheckScopeDetailsWebClient.get()).thenReturn(requestHeadersUriSpec);
+        // Output for verification
+        System.out.println(content);
 
-        // Mocking lambda for .uri()
-        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
-
-        // Mocking headers and response
-        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(expectedResponse));
-
-        // Execute the method
-        String response = creditCheckService.getScopeDetails(dealId, accessToken).block();
-
-        // Assertions
-        assertEquals(expectedResponse, response);
-        verify(creditCheckScopeDetailsWebClient, times(1)).get();
-        verify(requestHeadersUriSpec, times(1)).uri(any(Function.class));
-        verify(requestHeadersSpec, times(1)).headers(any());
-    }
-
-    @Test
-    void testGetScopeDetailsError() {
-        String dealId = "12345";
-        String accessToken = "token123";
-        WebClientResponseException exception = WebClientResponseException.create(500, "Internal Server Error", null, null, null);
-
-        // Mock the WebClient to throw an error
-        when(creditCheckScopeDetailsWebClient.get()).thenReturn(requestHeadersUriSpec);
-        when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.error(exception));
-
-        // Execute the method
-        String response = creditCheckService.getScopeDetails(dealId, accessToken).block();
-
-        // Assuming handleErrorResponse returns Mono.empty()
-        assertNull(response);
-        verify(creditCheckScopeDetailsWebClient, times(1)).get();
-        verify(requestHeadersUriSpec, times(1)).uri(any(Function.class));
-        verify(requestHeadersSpec, times(1)).headers(any());
+        // Assertion (example)
+        assertEquals("Expected file content", content);
     }
 }
