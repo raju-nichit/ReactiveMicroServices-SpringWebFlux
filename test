@@ -1,24 +1,124 @@
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.charset.StandardCharsets;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-public class FileReadTest {
+public class CreditCheckServiceTest {
+
+    @Mock
+    private WebClient creditCheckScopeDetailsWebClient;
+
+    @Mock
+    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
+
+    @Mock
+    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
+
+    @Mock
+    private WebClient.ResponseSpec responseSpec;
+
+    @InjectMocks
+    private CreditCheckService creditCheckService;  // Replace with your actual service class
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
 
     @Test
-    void readFileUsingPaths() throws Exception {
-        // Use ClassLoader to get the file path
-        String filePath = getClass().getClassLoader().getResource("testfile.txt").toURI().getPath();
-        
-        // Read all lines from the file
-        String content = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
+    void testGetScopeDetails_Success() {
+        String dealId = "12345";
+        String accessToken = "mockAccessToken";
+        String expectedResponse = "{\"status\":\"success\",\"data\":\"Sample Data\"}";
 
-        // Output for verification
-        System.out.println(content);
+        // Mock WebClient behavior
+        when(creditCheckScopeDetailsWebClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(expectedResponse));
 
-        // Assertion (example)
-        assertEquals("Expected file content", content);
+        // Execute the method
+        Mono<String> result = creditCheckService.getScopeDetails(dealId, accessToken);
+
+        // Verify the response using StepVerifier
+        StepVerifier.create(result)
+            .expectNext(expectedResponse)
+            .verifyComplete();
+
+        // Verify interactions
+        verify(creditCheckScopeDetailsWebClient).get();
+        verify(requestHeadersUriSpec).uri(any());
+        verify(requestHeadersSpec).headers(any());
+        verify(requestHeadersSpec).retrieve();
+        verify(responseSpec).bodyToMono(String.class);
+    }
+
+    @Test
+    void testGetScopeDetails_ClientError() {
+        String dealId = "12345";
+        String accessToken = "mockAccessToken";
+
+        // Simulate a 4xx error
+        WebClientResponseException clientException = WebClientResponseException.create(
+            400, "Bad Request", null, null, null
+        );
+
+        when(creditCheckScopeDetailsWebClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.error(clientException));
+
+        Mono<String> result = creditCheckService.getScopeDetails(dealId, accessToken);
+
+        // Verify error handling
+        StepVerifier.create(result)
+            .expectErrorMatches(throwable -> throwable instanceof RuntimeException &&
+                throwable.getMessage().contains("API call failed with status: 400"))
+            .verify();
+
+        // Verify interactions
+        verify(creditCheckScopeDetailsWebClient).get();
+        verify(requestHeadersUriSpec).uri(any());
+        verify(requestHeadersSpec).headers(any());
+        verify(requestHeadersSpec).retrieve();
+        verify(responseSpec).bodyToMono(String.class);
+    }
+
+    @Test
+    void testGetScopeDetails_UnexpectedError() {
+        String dealId = "12345";
+        String accessToken = "mockAccessToken";
+
+        // Simulate an unexpected exception (e.g., network issue)
+        when(creditCheckScopeDetailsWebClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.headers(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.error(new RuntimeException("Network issue")));
+
+        Mono<String> result = creditCheckService.getScopeDetails(dealId, accessToken);
+
+        // Verify unexpected error handling
+        StepVerifier.create(result)
+            .expectErrorMatches(throwable -> throwable instanceof RuntimeException &&
+                throwable.getMessage().contains("Unexpected error occurred"))
+            .verify();
+
+        // Verify interactions
+        verify(creditCheckScopeDetailsWebClient).get();
+        verify(requestHeadersUriSpec).uri(any());
+        verify(requestHeadersSpec).headers(any());
+        verify(requestHeadersSpec).retrieve();
+        verify(responseSpec).bodyToMono(String.class);
     }
 }
