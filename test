@@ -1,6 +1,5 @@
 import java.io.*;
 import java.util.Base64;
-import org.apache.pdfbox.pdmodel.PDDocument;
 
 public class PDFBase64Converter {
 
@@ -23,5 +22,20 @@ public class PDFBase64Converter {
     }
 
     public static void main(String[] args) {
-        String inputPdfPath = "input.pdf";  // Replace with your input PDF file path
-        String outputPdfPath = "output
+        String inputPdfPath = "C:/Users/user/Downloads/snehalJagdaleResume.pdf";  // Replace with your input PDF file path
+        String outputPdfPath = "C:/Users/user/Downloads/snehalJagdaleResume2.pdf";
+      
+        try {
+            // Convert PDF to Base64
+            String base64String = encodePDFToBase64(inputPdfPath);
+            System.out.println("Base64 Encoded PDF: " + base64String.substring(0, 100) + "..."); // Printing first 100 chars for preview
+
+            // Convert Base64 back to PDF
+            decodeBase64ToPDF(base64String, outputPdfPath);
+            System.out.println("PDF successfully converted from Base64 and saved as: " + outputPdfPath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+    
