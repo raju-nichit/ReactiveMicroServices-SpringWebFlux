@@ -1,1 +1,27 @@
-https://community.atlassian.com/t5/Bitbucket-questions/Creating-branch-from-an-old-commit/qaq-p/795260
+import java.io.*;
+import java.util.Base64;
+import org.apache.pdfbox.pdmodel.PDDocument;
+
+public class PDFBase64Converter {
+
+    // Convert PDF to Base64
+    public static String encodePDFToBase64(String pdfPath) throws IOException {
+        File file = new File(pdfPath);
+        FileInputStream fis = new FileInputStream(file);
+        byte[] pdfBytes = new byte[(int) file.length()];
+        fis.read(pdfBytes);
+        fis.close();
+        return Base64.getEncoder().encodeToString(pdfBytes);
+    }
+
+    // Convert Base64 to PDF
+    public static void decodeBase64ToPDF(String base64Content, String outputPdfPath) throws IOException {
+        byte[] decodedBytes = Base64.getDecoder().decode(base64Content);
+        FileOutputStream fos = new FileOutputStream(outputPdfPath);
+        fos.write(decodedBytes);
+        fos.close();
+    }
+
+    public static void main(String[] args) {
+        String inputPdfPath = "input.pdf";  // Replace with your input PDF file path
+        String outputPdfPath = "output
