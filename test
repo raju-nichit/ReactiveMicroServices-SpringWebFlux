@@ -1,41 +1,109 @@
-import java.io.*;
-import java.util.Base64;
+package com.example.statemachine;
 
-public class PDFBase64Converter {
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.statemachine.annotation.OnTransition;
+import org.springframework.statemachine.annotation.WithStateMachine;
+import org.springframework.statemachine.config.EnableStateMachine;
+import org.springframework.statemachine.config.StateMachineConfigurerAdapter;
+import org.springframework.statemachine.config.builders.StateMachineStateConfigurer;
+import org.springframework.statemachine.config.builders.StateMachineTransitionConfigurer;
+import org.springframework.web.bind.annotation.*;
 
-    // Convert PDF to Base64
-    public static String encodePDFToBase64(String pdfPath) throws IOException {
-        File file = new File(pdfPath);
-        FileInputStream fis = new FileInputStream(file);
-        byte[] pdfBytes = new byte[(int) file.length()];
-        fis.read(pdfBytes);
-        fis.close();
-        return Base64.getEncoder().encodeToString(pdfBytes);
-    }
+import java.util.EnumSet;
+import java.util.concurrent.CompletableFuture;
 
-    // Convert Base64 to PDF
-    public static void decodeBase64ToPDF(String base64Content, String outputPdfPath) throws IOException {
-        byte[] decodedBytes = Base64.getDecoder().decode(base64Content);
-        FileOutputStream fos = new FileOutputStream(outputPdfPath);
-        fos.write(decodedBytes);
-        fos.close();
-    }
-
+@SpringBootApplication
+public class StateMachineApplication {
     public static void main(String[] args) {
-        String inputPdfPath = "C:/Users/user/Downloads/snehalJagdaleResume.pdf";  // Replace with your input PDF file path
-        String outputPdfPath = "C:/Users/user/Downloads/snehalJagdaleResume2.pdf";
-      
-        try {
-            // Convert PDF to Base64
-            String base64String = encodePDFToBase64(inputPdfPath);
-            System.out.println("Base64 Encoded PDF: " + base64String.substring(0, 100) + "..."); // Printing first 100 chars for preview
-
-            // Convert Base64 back to PDF
-            decodeBase64ToPDF(base64String, outputPdfPath);
-            System.out.println("PDF successfully converted from Base64 and saved as: " + outputPdfPath);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        SpringApplication.run(StateMachineApplication.class, args);
     }
 }
-    
+
+enum States {
+    SAVE_START_EVENT, GFC_DETAILS, SCOPE_DETAILS, QUETIONRIE_DETAILS, GET_EMAIL_EVENT,
+    VALIDATE_DETAILS, ATTACHNENT_DETAILS, DOWNLOAD_ATTACHMNET_DETAILS, SEND_EMAIL, PROCESS_SEND_EMAIL_RESULT, STOP
+}
+
+enum Events {
+    SUCCESS, FAILURE
+}
+
+@EnableStateMachine
+class StateMachineConfig extends StateMachineConfigurerAdapter<States, Events> {
+    @Override
+    public void configure(StateMachineStateConfigurer<States, Events> states) throws Exception {
+        states.withStates()
+                .initial(States.SAVE_START_EVENT)
+                .states(EnumSet.allOf(States.class));
+    }
+
+    @Override
+    public void configure(StateMachineTransitionConfigurer<States, Events> transitions) throws Exception {
+        transitions
+                .withExternal().source(States.SAVE_START_EVENT).target(States.GFC_DETAILS).event(Events.SUCCESS)
+                .and().withExternal().source(States.SAVE_START_EVENT).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.GFC_DETAILS).target(States.SCOPE_DETAILS).event(Events.SUCCESS)
+                .and().withExternal().source(States.GFC_DETAILS).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.SCOPE_DETAILS).target(States.QUETIONRIE_DETAILS).event(Events.SUCCESS)
+                .and().withExternal().source(States.SCOPE_DETAILS).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.QUETIONRIE_DETAILS).target(States.GET_EMAIL_EVENT).event(Events.SUCCESS)
+                .and().withExternal().source(States.QUETIONRIE_DETAILS).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.GET_EMAIL_EVENT).target(States.VALIDATE_DETAILS).event(Events.SUCCESS)
+                .and().withExternal().source(States.GET_EMAIL_EVENT).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.VALIDATE_DETAILS).target(States.ATTACHNENT_DETAILS).event(Events.SUCCESS)
+                .and().withExternal().source(States.VALIDATE_DETAILS).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.ATTACHNENT_DETAILS).target(States.DOWNLOAD_ATTACHMNET_DETAILS).event(Events.SUCCESS)
+                .and().withExternal().source(States.ATTACHNENT_DETAILS).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.DOWNLOAD_ATTACHMNET_DETAILS).target(States.SEND_EMAIL).event(Events.SUCCESS)
+                .and().withExternal().source(States.DOWNLOAD_ATTACHMNET_DETAILS).target(States.STOP).event(Events.FAILURE)
+                .and().withExternal().source(States.SEND_EMAIL).target(States.PROCESS_SEND_EMAIL_RESULT).event(Events.SUCCESS)
+                .and().withExternal().source(States.SEND_EMAIL).target(States.STOP).event(Events.FAILURE);
+    }
+}
+
+@WithStateMachine
+class StateHandlers {
+    @OnTransition(target = "SAVE_START_EVENT")
+    public void handleSaveStart() { handleAction(States.SAVE_START_EVENT); }
+
+    @OnTransition(target = "GFC_DETAILS")
+    public void handleGfcDetails() { handleAction(States.GFC_DETAILS); }
+
+    @OnTransition(target = "SCOPE_DETAILS")
+    public void handleScopeDetails() { handleAction(States.SCOPE_DETAILS); }
+
+    @OnTransition(target = "QUETIONRIE_DETAILS")
+    public void handleQuestionnaireDetails() { handleAction(States.QUETIONRIE_DETAILS); }
+
+    @OnTransition(target = "GET_EMAIL_EVENT")
+    public void handleGetEmailEvent() { handleAction(States.GET_EMAIL_EVENT); }
+
+    @OnTransition(target = "VALIDATE_DETAILS")
+    public void handleValidateDetails() { handleAction(States.VALIDATE_DETAILS); }
+
+    @OnTransition(target = "ATTACHNENT_DETAILS")
+    public void handleAttachmentDetails() { handleAction(States.ATTACHNENT_DETAILS); }
+
+    @OnTransition(target = "DOWNLOAD_ATTACHMNET_DETAILS")
+    public void handleDownloadAttachmentDetails() { handleAction(States.DOWNLOAD_ATTACHMNET_DETAILS); }
+
+    @OnTransition(target = "SEND_EMAIL")
+    public void handleSendEmail() { handleAction(States.SEND_EMAIL); }
+
+    @OnTransition(target = "PROCESS_SEND_EMAIL_RESULT")
+    public void handleProcessSendEmailResult() { handleAction(States.PROCESS_SEND_EMAIL_RESULT); }
+
+    private void handleAction(States state) {
+        CompletableFuture.runAsync(() -> {
+            boolean apiCallSuccess = callExternalApi(state);
+            // Simulate sending event to state machine
+            System.out.println("State: " + state + " API Call Success: " + apiCallSuccess);
+        });
+    }
+
+    private boolean callExternalApi(States state) {
+        System.out.println("Calling external API for state: " + state);
+        return Math.random() > 0.2; // Simulated 80% success rate
+    }
+}
