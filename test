@@ -1,20 +1,3 @@
-public List<OracleDocument> filterPdhProductsData(String type, String crmProductId) throws SQLException {
-    OracleCollection collection = getCollection();
-
-    // Create the filter JSON
-    String queryFilter = "{ \"$and\": [ " +
-        "{ \"type\": { \"$eq\": \"" + type + "\" } }, " +
-        "{ \"json_document.crmProductid\": { \"$eq\": \"" + crmProductId + "\" } } " +
-    "] }";
-
-    OracleDocument filter = collection.createDocumentFromString(queryFilter);
-
-    // Execute query
-    OracleCursor cursor = collection.find().filter(filter).getCursor();
-
-    List<OracleDocument> result = new ArrayList<>();
-    while (cursor.hasNext()) {
-        result.add(cursor.next());
-    }
-    return result;
-}
+# Enable Oracle JDBC Debug Logging
+oracle.jdbc.Trace=true
+oracle.jdbc.level=FINEST
