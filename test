@@ -1,3 +1,8 @@
-# Enable Oracle JDBC Debug Logging
-oracle.jdbc.Trace=true
-oracle.jdbc.level=FINEST
+
+        CloseableHttpAsyncClient asyncHttpClient = HttpAsyncClients.custom()
+                .setSSLContext(sslContext)
+                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE) // Disable hostname verification
+                .build();
+
+        // Start the async client before using it
+        asyncHttpClient.start();
