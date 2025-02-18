@@ -1,8 +1,43 @@
+import org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient;
+import org.apache.hc.client5.http.impl.async.HttpAsyncClients;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
+import org.apache.hc.core5.ssl.TrustAllStrategy;
+import org.apache.hc.core5.ssl.SSLInitializationException;
+import org.apache.hc.core5.reactor.IOReactorConfig;
+import org.apache.hc.core5.http.nio.ssl.ClientTlsStrategyBuilder;
+import org.apache.hc.core5.net.URIAuthority;
+import org.springframework.http.client.reactive.HttpComponentsClientHttpConnector;
+import org.springframework.web.reactive.function.client.WebClient;
 
-        CloseableHttpAsyncClient asyncHttpClient = HttpAsyncClients.custom()
-                .setSSLContext(sslContext)
-                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE) // Disable hostname verification
+import javax.net.ssl.SSLContext;
+
+public class WebClientConfig {
+
+    public static WebClient createWebClient() throws Exception {
+        // Create SSLContext that trusts all certificates (NOT recommended for production)
+        SSLContext sslContext = SSLContextBuilder.create()
+                .loadTrustMaterial(null, TrustAllStrategy.INSTANCE)
                 .build();
 
-        // Start the async client before using it
+        // Configure TLS strategy
+        var tlsStrategy = ClientTlsStrategyBuilder.create()
+                .setSslContext(sslContext)
+                .setHostnameVerifier(NoopHostnameVerifier.INSTANCE) // Disable hostname verification
+                .build();
+
+        // Create Async HttpClient
+        CloseableHttpAsyncClient asyncHttpClient = HttpAsyncClients.custom()
+                .setIOReactorConfig(IOReactorConfig.DEFAULT)
+                .setTlsStrategy(tlsStrategy)
+                .build();
+
+        // Start the async client
         asyncHttpClient.start();
+
+        // Create WebClient using the async client
+        return WebClient.builder()
+                .clientConnector(new HttpComponentsClientHttpConnector(asyncHttpClient))
+                .build();
+    }
+}
