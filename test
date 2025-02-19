@@ -1,30 +1,15 @@
-@Bean
-public ReactiveClientHttpConnector reactiveClientHttpConnector() {
-    try {
-        char[] password = env.getProperty("keypass").toCharArray();
-        KeyStore keyStore = loadKeyStore(env.getProperty("keystore"), password);
+public List<String> getFilteredProducts() throws OracleException {
+        OracleCollection collection = pdhProductDao.getCollection();
 
-        SslContext sslContext = SslContextBuilder
-                .forClient()
-                .keyManager(keyStore, password)
-                .trustManager(InsecureTrustManagerFactory.INSTANCE) // Trust all certificates (for testing)
-                .build();
+        OracleDocument filterDoc = collection.createDocumentFromString(
+                "{ \"TYPE\": \"Validation Services\", \"crmProductId\": \"CA0169-01\" }"
+        );
 
-        HttpClient httpClient = HttpClient.create()
-                .secure(ssl -> ssl.sslContext(sslContext))
-                .resolver(DefaultAddressResolverGroup.INSTANCE); // Bypasses strict hostname verification
+        List<String> results = new ArrayList<>();
+        OracleCursor cursor = collection.find().filter(filterDoc).getCursor();
 
-        return new ReactorClientHttpConnector(httpClient);
-    } catch (Exception e) {
-        logger.error("Error initializing WebClient with SSL", e);
-        throw new IllegalStateException("Failed to create WebClient", e);
+        while (cursor.hasNext()) {
+            results.add(cursor.next().getContentAsString());
+        }
+        return results;
     }
-}
-
-private KeyStore loadKeyStore(String path, char[] password) throws Exception {
-    try (InputStream keyStoreStream = new FileInputStream(path)) {
-        KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(keyStoreStream, password);
-        return keyStore;
-    }
-}
