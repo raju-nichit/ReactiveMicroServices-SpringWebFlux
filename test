@@ -1,32 +1,10 @@
-import oracle.soda.*;
-import org.springframework.stereotype.Service;
-import java.util.ArrayList;
-import java.util.List;
-
-@Service
-public class SodaQueryService {
-
-    private final PdhProductDao pdhProductDao;
-
-    public SodaQueryService(PdhProductDao pdhProductDao) {
-        this.pdhProductDao = pdhProductDao;
-    }
-
-    public List<String> getFilteredProducts() throws OracleException {
-        OracleCollection collection = pdhProductDao.getCollection();
-
-        // ✅ Correct way to create a filter document for JSON column
-        OracleDocument filterDoc = collection.createDocument("{ \"$and\": [ " +
-                "{ \"TYPE\": \"Validation Services\" }, " +
-                "{ \"json_data.crmProductId\": \"CA0169-01\" } ] }");
-
-        List<String> results = new ArrayList<>();
-        OracleCursor cursor = collection.find().filter(filterDoc).getCursor();
-
-        while (cursor.hasNext()) {
-            results.add(cursor.next().getContentAsString());
+ public static int countOccurrences(String str, String subStr) {
+        Matcher matcher = Pattern.compile(Pattern.quote(subStr)).matcher(str);
+        int count = 0;
+        
+        while (matcher.find()) {
+            count++;
         }
 
-        return results;
+        return count;
     }
-}
