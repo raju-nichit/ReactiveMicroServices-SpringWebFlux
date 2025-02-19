@@ -10,7 +10,7 @@
 
             SslContext sslContext = SslContextBuilder
                     .forClient()
-                    .trustManager(trustManagerFactory)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE) // Disables host verification
                     .build();
 
             HttpClient httpClient = HttpClient.create()
