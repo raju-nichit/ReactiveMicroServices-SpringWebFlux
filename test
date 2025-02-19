@@ -1,7 +1,25 @@
-keytool -importkeystore \
-  -srckeystore your_certificate.pfx \
-  -srcstoretype PKCS12 \
-  -destkeystore your_keystore.jks \
-  -deststoretype JKS
+ public WebClient webClient() {
+        try {
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
+            try (FileInputStream fis = new FileInputStream(keyStorePath)) {
+                keyStore.load(fis, keyStorePassword.toCharArray());
+            }
 
-keytool -list -keystore your_keystore.jks
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(keyStore);
+
+            SslContext sslContext = SslContextBuilder
+                    .forClient()
+                    .trustManager(trustManagerFactory)
+                    .build();
+
+            HttpClient httpClient = HttpClient.create()
+                    .secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
+
+            return WebClient.builder()
+                    .clientConnector(new ReactorClientHttpConnector(httpClient))
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Error initializing WebClient with SSL", e);
+        }
+    }
