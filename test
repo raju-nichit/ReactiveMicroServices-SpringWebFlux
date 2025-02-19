@@ -1,9 +1,24 @@
-public List<String> getFilteredProducts() throws OracleException {
+import oracle.soda.*;
+import org.springframework.stereotype.Service;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class SodaQueryService {
+
+    private final PdhProductDao pdhProductDao;
+
+    public SodaQueryService(PdhProductDao pdhProductDao) {
+        this.pdhProductDao = pdhProductDao;
+    }
+
+    public List<String> getFilteredProducts() throws OracleException {
         OracleCollection collection = pdhProductDao.getCollection();
 
-        OracleDocument filterDoc = collection.createDocumentFromString(
-                "{ \"TYPE\": \"Validation Services\", \"crmProductId\": \"CA0169-01\" }"
-        );
+        // ✅ Correct way to create a filter document for JSON column
+        OracleDocument filterDoc = collection.createDocument("{ \"$and\": [ " +
+                "{ \"TYPE\": \"Validation Services\" }, " +
+                "{ \"json_data.crmProductId\": \"CA0169-01\" } ] }");
 
         List<String> results = new ArrayList<>();
         OracleCursor cursor = collection.find().filter(filterDoc).getCursor();
@@ -11,5 +26,7 @@ public List<String> getFilteredProducts() throws OracleException {
         while (cursor.hasNext()) {
             results.add(cursor.next().getContentAsString());
         }
+
         return results;
     }
+}
