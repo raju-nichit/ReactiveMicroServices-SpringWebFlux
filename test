@@ -1,28 +1,30 @@
- @Bean
-    public WebClient webClient() {
-        try {
-            KeyStore keyStore = KeyStore.getInstance("PKCS12");
-            try (InputStream is = getClass().getClassLoader().getResourceAsStream(keyStorePath);
-                 FileInputStream fis = is != null ? new FileInputStream(is.toString()) : new FileInputStream(keyStorePath)) {
-                keyStore.load(fis, keyStorePassword.toCharArray());
-            }
+@Bean
+public ReactiveClientHttpConnector reactiveClientHttpConnector() {
+    try {
+        char[] password = env.getProperty("keypass").toCharArray();
+        KeyStore keyStore = loadKeyStore(env.getProperty("keystore"), password);
 
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init(keyStore);
+        SslContext sslContext = SslContextBuilder
+                .forClient()
+                .keyManager(keyStore, password)
+                .trustManager(InsecureTrustManagerFactory.INSTANCE) // Trust all certificates (for testing)
+                .build();
 
-            SslContext sslContext = SslContextBuilder
-                    .forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE) // Disables host verification
-                    .build();
+        HttpClient httpClient = HttpClient.create()
+                .secure(ssl -> ssl.sslContext(sslContext))
+                .resolver(DefaultAddressResolverGroup.INSTANCE); // Bypasses strict hostname verification
 
-            HttpClient httpClient = HttpClient.create()
-                    .secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
+        return new ReactorClientHttpConnector(httpClient);
+    } catch (Exception e) {
+        logger.error("Error initializing WebClient with SSL", e);
+        throw new IllegalStateException("Failed to create WebClient", e);
+    }
+}
 
-            return WebClient.builder()
-                    .clientConnector(new ReactorClientHttpConnector(httpClient))
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Error initializing WebClient with SSL", e);
-        }
+private KeyStore loadKeyStore(String path, char[] password) throws Exception {
+    try (InputStream keyStoreStream = new FileInputStream(path)) {
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(keyStoreStream, password);
+        return keyStore;
     }
 }
