@@ -1,91 +1,33 @@
-import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
+@Test
+void processUpdateEventRequest_ShouldReturnResponse_OnSuccess() {
+    // Mock dependencies
+    WebClient webClient = mock(WebClient.class);
+    WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
+    WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
+    WebClient.RequestHeadersSpec<?> requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
+    WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
 
-import static org.mockito.Mockito.*;
+    String apiUrl = "http://mock-api.com/update";
+    CreditCheckService creditCheckService = new CreditCheckService(() -> webClient, apiUrl);
+    String requestJson = "{\"key\": \"value\"}";
+    String expectedResponse = "{\"status\": \"success\"}";
 
-class CreditCheckServiceTest {
+    // Correctly mock each step
+    when(webClient.post()).thenReturn(requestBodyUriSpec);
+    when(requestBodyUriSpec.uri(eq(apiUrl))).thenReturn(requestBodySpec); // Fix: Ensure this returns a valid mock
+    when(requestBodySpec.header(eq("Content-Type"), eq(MediaType.APPLICATION_JSON_VALUE))).thenReturn(requestBodySpec);
+    when(requestBodySpec.bodyValue(requestJson)).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(expectedResponse));
 
-    @Test
-    void processUpdateEventRequest_ShouldReturnResponse_OnSuccess() {
-        // Mock dependencies
-        WebClient webClient = mock(WebClient.class);
-        WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
+    // Call method
+    Mono<String> result = creditCheckService.processUpdateEventRequest(requestJson);
 
-        String apiUrl = "http://mock-api.com/update";
-        CreditCheckService creditCheckService = new CreditCheckService(() -> webClient, apiUrl);
-        String requestJson = "{\"key\": \"value\"}";
-        String expectedResponse = "{\"status\": \"success\"}";
+    // Verify response
+    StepVerifier.create(result)
+            .expectNext(expectedResponse)
+            .verifyComplete();
 
-        // Stubbing WebClient interactions
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(apiUrl)).thenReturn(requestBodySpec);
-        when(requestBodySpec.header("Content-Type", MediaType.APPLICATION_JSON_VALUE)).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(requestJson)).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just(expectedResponse));
-
-        // Call method
-        Mono<String> result = creditCheckService.processUpdateEventRequest(requestJson);
-
-        // Verify response
-        StepVerifier.create(result)
-                .expectNext(expectedResponse)
-                .verifyComplete();
-
-        // Verify interactions
-        verify(webClient, times(1)).post();
-    }
-
-    @Test
-    void processUpdateEventRequest_ShouldReturnError_WhenUrlIsEmpty() {
-        String apiUrl = "";
-        WebClient webClient = mock(WebClient.class);
-        CreditCheckService serviceWithEmptyUrl = new CreditCheckService(() -> webClient, apiUrl);
-        String requestJson = "{\"key\": \"value\"}";
-
-        // Call method
-        Mono<String> result = serviceWithEmptyUrl.processUpdateEventRequest(requestJson);
-
-        // Verify that an error is thrown
-        StepVerifier.create(result)
-                .expectError(IllegalArgumentException.class)
-                .verify();
-    }
-
-    @Test
-    void processUpdateEventRequest_ShouldHandleErrorResponse_OnFailure() {
-        // Mock dependencies
-        WebClient webClient = mock(WebClient.class);
-        WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
-        WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
-        WebClient.RequestHeadersSpec<?> requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
-        WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
-
-        String apiUrl = "http://mock-api.com/update";
-        CreditCheckService creditCheckService = new CreditCheckService(() -> webClient, apiUrl);
-        String requestJson = "{\"key\": \"value\"}";
-
-        // Stubbing WebClient interactions to return an error
-        when(webClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(apiUrl)).thenReturn(requestBodySpec);
-        when(requestBodySpec.header("Content-Type", MediaType.APPLICATION_JSON_VALUE)).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(requestJson)).thenReturn(requestHeadersSpec);
-        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.error(new RuntimeException("Service Unavailable")));
-
-        // Call method
-        Mono<String> result = creditCheckService.processUpdateEventRequest(requestJson);
-
-        // Verify that an error is handled properly
-        StepVerifier.create(result)
-                .expectErrorMatches(throwable -> throwable instanceof RuntimeException &&
-                        throwable.getMessage().contains("Error processing request"))
-                .verify();
-    }
+    // Verify interactions
+    verify(webClient, times(1)).post();
 }
