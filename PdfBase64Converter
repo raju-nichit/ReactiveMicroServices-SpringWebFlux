@@ -4,17 +4,22 @@ import java.util.Base64;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class PdfToBase64 {
+public class Base64ToPdf {
     public static void main(String[] args) {
-        String filePath = "C:\\Users\\user\\Downloads\\08DPC9U_1208180055270200_27032025153716_RN.pdf";
+        String base64File = "output_base64.txt"; // or your base64 string directly
+        String outputPdfPath = "decoded_output.pdf";
+
         try {
-            byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
-            String encodedString = Base64.getEncoder().encodeToString(fileContent);
+            // Read Base64 string from file
+            String base64Content = new String(Files.readAllBytes(Paths.get(base64File)));
 
-            // Optional: write base64 to file
-            Files.write(Paths.get("output_base64.txt"), encodedString.getBytes());
+            // Decode Base64 to byte[]
+            byte[] decodedBytes = Base64.getDecoder().decode(base64Content);
 
-            System.out.println("PDF successfully encoded to Base64.");
+            // Write to PDF file
+            Files.write(Paths.get(outputPdfPath), decodedBytes);
+
+            System.out.println("Base64 successfully decoded to PDF.");
         } catch (IOException e) {
             e.printStackTrace();
         }
