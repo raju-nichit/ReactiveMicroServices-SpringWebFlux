@@ -1,51 +1,20 @@
 package com.example.demoswagger;
 import java.io.*;
 import java.util.Base64;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
-public class PdfBase64Converter {
-
-    /**
-     * Converts a PDF file to a Base64 encoded string.
-     * @param filePath Path to the PDF file
-     * @return Base64 encoded string
-     * @throws IOException If file reading fails
-     */
-    public static String convertPdfToBase64(String filePath) throws IOException {
-        File file = new File(filePath);
-        FileInputStream fileInputStream = new FileInputStream(file);
-        
-        byte[] fileBytes = new byte[(int) file.length()];
-        fileInputStream.read(fileBytes);
-        fileInputStream.close();
-        
-        // Convert to Base64
-        return Base64.getEncoder().encodeToString(fileBytes);
-    }
-
-    /**
-     * Converts a Base64 encoded string back to a PDF file.
-     * @param base64String Base64 encoded PDF
-     * @param outputFilePath Path where the PDF should be saved
-     * @throws IOException If file writing fails
-     */
-    public static void convertBase64ToPdf(String base64String, String outputFilePath) throws IOException {
-        byte[] decodedBytes = Base64.getDecoder().decode(base64String);
-        FileOutputStream fileOutputStream = new FileOutputStream(new File(outputFilePath));
-        fileOutputStream.write(decodedBytes);
-        fileOutputStream.close();
-        System.out.println("PDF file created successfully at: " + outputFilePath);
-    }
-
+public class PdfToBase64 {
     public static void main(String[] args) {
+        String filePath = "C:\\Users\\user\\Downloads\\08DPC9U_1208180055270200_27032025153716_RN.pdf";
         try {
-            // Convert PDF to Base64
-            String base64String = convertPdfToBase64("C:\\Users\\user\\Downloads\\Uptox.pdf");
-            System.out.println("Base64 Encoded PDF:\n" + base64String);
+            byte[] fileContent = Files.readAllBytes(Paths.get(filePath));
+            String encodedString = Base64.getEncoder().encodeToString(fileContent);
 
-            // Convert Base64 back to PDF
-            convertBase64ToPdf(base64String, "output.pdf");
-            System.out.println("Conversion complete!");
-            
+            // Optional: write base64 to file
+            Files.write(Paths.get("output_base64.txt"), encodedString.getBytes());
+
+            System.out.println("PDF successfully encoded to Base64.");
         } catch (IOException e) {
             e.printStackTrace();
         }
