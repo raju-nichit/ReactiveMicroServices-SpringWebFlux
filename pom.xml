@@ -1,6 +1,11 @@
-private boolean shouldSkip(String path) {
-        return SKIP_PATHS.stream().anyMatch(path::startsWith);
-    }
-if (shouldSkip(path)) {
-            return chain.filter(exchange);
-        }
+<dependency>
+  <groupId>org.zalando</groupId>
+  <artifactId>logbook-spring-boot-starter</artifactId>
+  <version>3.3.0</version>
+</dependency>
+
+
+logbook:
+  include:
+    - request-body
+    - response-body
