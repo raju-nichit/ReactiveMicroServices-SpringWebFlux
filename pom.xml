@@ -1,9 +1,6 @@
-private static final List<String> SKIP_PATHS = List.of(
-            "/graphiql",
-            "/swagger",
-            "/swagger-ui",
-            "/v3/api-docs",
-            "/webjars",
-            "/favicon.ico",
-            "/actuator"
-    );
+private boolean shouldSkip(String path) {
+        return SKIP_PATHS.stream().anyMatch(path::startsWith);
+    }
+if (shouldSkip(path)) {
+            return chain.filter(exchange);
+        }
