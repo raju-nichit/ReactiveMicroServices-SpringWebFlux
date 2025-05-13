@@ -1,19 +1,38 @@
-<!-- MongoDB -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-mongodb</artifactId>
-</dependency>
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import nl.altindag.ssl.SSLFactory;
+import org.springframework.boot.autoconfigure.mongo.MongoProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
-<!-- AltinDag SSLFactory -->
-<dependency>
-    <groupId>nl.altindag</groupId>
-    <artifactId>sslcontext-kickstart-for-apache-httpclient</artifactId>
-    <version>7.4.0</version>
-</dependency>
+import javax.net.ssl.SSLContext;
 
-<!-- Lombok (for @Slf4j) -->
-<dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-    <scope>provided</scope>
-</dependency>
+@Configuration
+public class MongoConfig {
+
+    @Bean
+    public MongoClientSettings mongoClientSettingsDev(MongoProperties properties, Environment environment) {
+        // Build SSL context using sslcontext-kickstart
+        SSLFactory sslFactory = SSLFactory.builder()
+                .withUnsafeTrustMaterial() // or load from keystore/truststore
+                .build();
+
+        MongoClientSettings.Builder builder = MongoClientSettings.builder();
+
+        // Apply connection string from properties
+        String uri = properties.getUri(); // usually from application.yml
+        builder.applyConnectionString(new ConnectionString(uri));
+
+        // Apply SSL context
+        builder.applyToSslSettings(b -> {
+            b.enabled(true);
+            b.context(sslFactory.getSslContext());
+        });
+
+        // Optional: socket, pool, credentials etc.
+        builder.applyToSocketSettings(socket -> socket.connectTimeout(10000, java.util.concurrent.TimeUnit.MILLISECONDS));
+
+        return builder.build();
+    }
+}
