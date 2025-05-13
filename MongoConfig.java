@@ -1,15 +1,16 @@
-package com.example.config;
-
+<dependency>
+    <groupId>nl.altindag</groupId>
+    <artifactId>sslcontext-kickstart</artifactId>
+    <version>9.0.3</version> <!-- ✅ Compatible with Java 17+ and Spring Boot 3.x -->
+</dependency>
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import lombok.extern.slf4j.Slf4j;
+import nl.altindag.ssl.SSLFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.mongo.MongoClientSettingsBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import javax.net.ssl.SSLContext;
-import java.security.NoSuchAlgorithmException;
 
 @Configuration
 @Slf4j
@@ -21,33 +22,34 @@ public class MongoConfig {
     @Value("${application.dbusername}")
     private String dbusername;
 
+    @Value("${application.dbpassword}")
+    private String dbpassword;
+
     @Value("${application.dbname}")
     private String dbname;
-
-    @Value("${application.dbpassword}")
-    private String dbpassword; // Assuming password is provided
 
     @Bean
     public MongoClientSettingsBuilderCustomizer mongoClientSettingsBuilderCustomizer() {
         return clientSettingsBuilder -> {
             try {
-                // Build SSL context (you should use a real SSLFactory implementation)
-                SSLContext sslContext = SSLContext.getDefault(); // Replace with actual SSLFactory if needed
+                // ✅ Build SSLFactory with unsafe trust for dev/test
+                SSLFactory sslFactory = SSLFactory.builder()
+                        .withUnsafeTrustMaterial()
+                        .build();
 
-                // Construct the MongoDB URI
                 String uri = "mongodb://" + dbusername + ":" + dbpassword + "@" + dbpath + "/" + dbname + "?ssl=true";
 
-                log.info("Connecting to MongoDB at {}", uri);
+                log.info("Connecting to MongoDB with URI: {}", uri);
 
                 clientSettingsBuilder
                     .applyConnectionString(new ConnectionString(uri))
                     .applyToSslSettings(ssl -> {
                         ssl.enabled(true);
-                        ssl.context(sslContext);
+                        ssl.context(sslFactory.getSslContext());
                     });
 
             } catch (Exception e) {
-                log.error("Error connecting to MongoDB. Please check connection details.", e);
+                log.error("MongoDB connection failed with SSL configuration", e);
                 throw new RuntimeException(e);
             }
         };
