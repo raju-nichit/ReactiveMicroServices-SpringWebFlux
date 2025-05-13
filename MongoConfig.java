@@ -1,58 +1,57 @@
-package com.example.config;
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import lombok.extern.slf4j.Slf4j;
-import nl.altindag.ssl.SSLFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.mongo.MongoClientSettingsBuilderCustomizer;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import java.util.Base64;
+import java.util.List;
 
-@Configuration
-@Slf4j
-public class MongoConfig {
+public class ElasticsearchConfig {
 
-    @Value("${application.dbpath}")
-    private String dbpath;
+    private static final Logger log = LoggerFactory.getLogger(ElasticsearchConfig.class);
 
-    @Value("${application.dbusername}")
-    private String dbusername;
+    private String es_username = "your_username"; // Inject or load from config
+    private String es_password = "your_base64_password"; // Inject or load from config
+    private int es_port = 9921;
 
-    @Value("${application.dbpassword}")
-    private String dbpassword;
+    public RestClientBuilder getRestClientBuilder(List<String> hosts) {
 
-    @Value("${application.dbname}")
-    private String dbname;
+        if (hosts == null || hosts.isEmpty()) {
+            throw new IllegalArgumentException("Elasticsearch hosts list cannot be null or empty");
+        }
 
-    @Bean
-    public MongoClientSettingsBuilderCustomizer mongoClientSettingsBuilderCustomizer() {
-        return clientSettingsBuilder -> {
-            try {
-                // ⚠️ Build SSLFactory with UNSAFE trust (for local/test only)
-                SSLFactory sslFactory = SSLFactory.builder()
-                        .withUnsafeTrustMaterial() // Accepts all certs
-                        .build();
+        log.info("es_host(s) in getRestClientBuilder: {}", hosts);
 
-                // ⚠️ URI-encode username/password if needed
-                String encodedUser = java.net.URLEncoder.encode(dbusername, java.nio.charset.StandardCharsets.UTF_8);
-                String encodedPass = java.net.URLEncoder.encode(dbpassword, java.nio.charset.StandardCharsets.UTF_8);
+        String decodedPwd = new String(Base64.getDecoder().decode(es_password));
+        CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        credentialsProvider.setCredentials(
+                AuthScope.ANY,
+                new UsernamePasswordCredentials(es_username, decodedPwd)
+        );
 
-                String uri = String.format("mongodb://%s:%s@%s/%s?ssl=true", encodedUser, encodedPass, dbpath, dbname);
+        HttpHost[] httpHosts = hosts.stream()
+                .filter(StringUtils::hasText)
+                .map(host -> {
+                    log.info("Adding ES host: {}", host);
+                    return new HttpHost(host, es_port);
+                })
+                .toArray(HttpHost[]::new);
 
-                log.info("Connecting to MongoDB at {}", dbpath);
+        if (httpHosts.length == 0) {
+            throw new IllegalArgumentException("No valid Elasticsearch hosts provided");
+        }
 
-                clientSettingsBuilder
-                        .applyConnectionString(new ConnectionString(uri))
-                        .applyToSslSettings(ssl -> {
-                            ssl.enabled(true);
-                            ssl.context(sslFactory.getSslContext());
-                        });
-
-            } catch (Exception e) {
-                log.error("MongoDB SSL setup failed", e);
-                throw new IllegalStateException("Unable to initialize MongoClientSettings with SSL", e);
-            }
-        };
+        return RestClient.builder(httpHosts)
+                .setHttpClientConfigCallback(httpClientBuilder -> {
+                    httpClientBuilder.disableAuthCaching();
+                    return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+                });
     }
 }
