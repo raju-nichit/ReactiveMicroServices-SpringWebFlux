@@ -1,11 +1,31 @@
-<dependency>
-  <groupId>org.zalando</groupId>
-  <artifactId>logbook-spring-boot-starter</artifactId>
-  <version>3.3.0</version>
-</dependency>
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
 
-logbook:
-  include:
-    - request-body
-    - response-body
+@Component
+public class LoggingFilter extends OncePerRequestFilter {
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
+
+        // Log Request details
+        logger.info("Incoming Request: method={}, uri={}, headers={}",
+                request.getMethod(),
+                request.getRequestURI(),
+                request.getHeaderNames());
+
+        // Proceed with filter chain
+        filterChain.doFilter(request, response);
+
+        // Log Response details
+        logger.info("Outgoing Response: status={}", response.getStatus());
+    }
+}
