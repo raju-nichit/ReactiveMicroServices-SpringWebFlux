@@ -1,12 +1,12 @@
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
@@ -16,9 +16,9 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
 
-        // Wrap request and response to enable body caching
         ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
         ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
 
@@ -27,29 +27,19 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
         } finally {
             logRequest(wrappedRequest);
             logResponse(wrappedResponse);
-            wrappedResponse.copyBodyToResponse(); // Important: copy body back to response
+            wrappedResponse.copyBodyToResponse(); // Very important!
         }
     }
 
     private void logRequest(ContentCachingRequestWrapper request) {
-        String body = new String(request.getContentAsByteArray(), StandardCharsets.UTF_8);
-        logger.info("Incoming Request: method={}, uri={}, headers={}, body={}",
-                request.getMethod(),
-                request.getRequestURI(),
-                request.getHeaderNames(),
-                body);
+        String requestBody = new String(request.getContentAsByteArray(), StandardCharsets.UTF_8);
+        logger.info("Incoming Request: method={}, uri={}, body={}",
+                request.getMethod(), request.getRequestURI(), requestBody);
     }
 
     private void logResponse(ContentCachingResponseWrapper response) {
-        String body = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
+        String responseBody = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
         logger.info("Outgoing Response: status={}, body={}",
-                response.getStatus(),
-                body);
+                response.getStatus(), responseBody);
     }
 }
-<dependency>
-    <groupId>jakarta.servlet</groupId>
-    <artifactId>jakarta.servlet-api</artifactId>
-    <version>6.0.0</version>
-    <scope>provided</scope>
-</dependency>
