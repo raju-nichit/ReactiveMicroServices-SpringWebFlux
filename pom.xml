@@ -1,16 +1,7 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Map;
-
-String jsonString = """
 {
   "$query": {
-    "$and": [
-      { "json.templateName": { "$regex": "(?i).*TEMPLATE_TESTI.*" } },
-      { "json.templateId": "TEMP123" }
-    ]
+    "json.templateName": {
+      "$regex": "(?i).*TEMPLATE_TESTI.*"
+    }
   }
 }
-""";
-
-ObjectMapper mapper = new ObjectMapper();
-Map<String, Object> queryMap = mapper.readValue(jsonString, Map.class);
