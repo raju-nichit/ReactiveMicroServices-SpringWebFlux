@@ -1,7 +1,12 @@
-SELECT *
-FROM TEMPLATE_COLLECTION
-WHERE REGEXP_LIKE(
-  json_value(json_data, '$.json.templateName'),
-  'TEMPLATE_TESTI',
-  'i'
-);
+String queryJson = """
+{
+  "$query": {
+    "$expr": {
+      "$eq": [
+        { "$lower": "$json.templateName" },
+        "template_test1"
+      ]
+    }
+  }
+}
+""";
