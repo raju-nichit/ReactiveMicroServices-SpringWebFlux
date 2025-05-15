@@ -1,7 +1,7 @@
-{
-  "$query": {
-    "json.templateName": {
-      "$regex": "(?i).*TEMPLATE_TESTI.*"
-    }
-  }
-}
+SELECT *
+FROM TEMPLATE_COLLECTION
+WHERE REGEXP_LIKE(
+  json_value(json_data, '$.json.templateName'),
+  'TEMPLATE_TESTI',
+  'i'
+);
