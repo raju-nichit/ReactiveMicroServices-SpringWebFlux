@@ -1,12 +1,1 @@
-String queryJson = """
-{
-  "$query": {
-    "$expr": {
-      "$eq": [
-        { "$lower": "$json.templateName" },
-        "template_test1"
-      ]
-    }
-  }
-}
-""";
+All users accessing ECS applications in the UAT1 environment via host-specific URLs will be impacted by upcoming cluster changes. Please review your ECS API endpoints. If you are using host-based URLs, update them to use NGINX-based URLs to ensure uninterrupted access and functionality."
